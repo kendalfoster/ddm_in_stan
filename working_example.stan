@@ -10,25 +10,36 @@ functions{
     real taa = t / (a_i * a_i);
     
     // define variables for use later (have to do it early because of Stan)
+    // constants
     real log_2_pi_2 = 0.5 * log(2 * pi());
+    real sv_thresh = 0.0;
+    // used in both large-time and small-time
+    real mult = 0.0;
+    real exp_err = 0.0;
     real gamma = -0.5 * pi() * pi() * taa;
     real summ = 0.0;
+    int max_int = 1000;
+    // used only in large-time
+    int kl = 0;
+    real k_dbl = 0.0;
+    real bc = 1 / (pi() * sqrt(taa));
+    // used only in small-time
     real minterms = 0.5 * sqrt(taa) - 0.5 * w_i; // min number of terms, truncates toward 0
     real term = 0.0;
     real rj = 0.0;
     int js = 0;
-
+    
     // initialize output
     real logp = 0.0;
     
     // check large-time number of terms
-    real mult = (sv_i * sv_i * a_i * a_i * w_i * w_i - 2 * v_i * a_i * w_i - v_i * v_i * t)
-                / (2 + 2 * sv_i * sv_i * t) - 0.5 * log(1 + sv_i * sv_i * t) - 2 * log(a_i);
-    real exp_err = 0.000001 * exp(-mult);
-    int kl = 0;
-    int max_int = 1000;
-    real k_dbl = 0.0;
-    real bc = 1 / (pi() * sqrt(taa));
+    if (sv_i < sv_thresh) {
+      mult = - v_i * a_i * w_i - 0.5 * v_i*v_i * t - 2 * log(a_i);
+    } else {
+      mult = (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i - v_i*v_i * t)
+      / (2 + 2 * sv_i*sv_i * t) - 0.5 * log(1 + sv_i*sv_i * t) - 2 * log(a_i);
+    }
+    exp_err = 0.000001 * exp(-mult);
     if (bc > max_int) { // boundary condition
       k_dbl = max_int;
     } else {
@@ -52,9 +63,15 @@ functions{
       }
       logp += log(pi());
     } else { // do small-time
-      mult = log(a_i) - 1.5 * log(t) - log_2_pi_2 - 0.5 * log(1 + sv_i*sv_i * t)
-             + (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i
-                - v_i*v_i * t) / (2 + 2 * sv_i*sv_i * t);
+      if (sv_i < sv_thresh) {
+        mult = log(a_i) - log_2_pi_2 - 1.5 * log(t) - v_i * a_i * w_i
+        - 0.5 * v_i*v_i * t;
+      } else {
+        mult = log(a_i) - 1.5 * log(t) - log_2_pi_2
+        - 0.5 * log(1 + sv_i*sv_i * t)
+        + (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i
+        - v_i*v_i * t) / (2 + 2 * sv_i*sv_i * t);
+      }
       exp_err = 0.000001 * exp(-mult);
       gamma = -1 / (2 * taa);
       summ = w_i * exp(gamma * w_i*w_i); // initialize with j=0 term
@@ -105,6 +122,14 @@ parameters {
 }
 
 model {
+  // Prior distributions on parameters
+  a ~ gamma(3, 1.5);
+  v ~ normal(0, 2.5);
+  t0 ~ gamma(2, 4);
+  w ~ beta(2, 2);
+  sv ~ gamma(2, 1);
+  
   for(i in 1:N)
     rt[i] ~ ddm(resp[i], a, v, t0, w, sv);
 }
+
