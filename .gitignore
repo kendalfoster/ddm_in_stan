@@ -1,0 +1,13 @@
+*.ini
+.Rproj.user
+.Rhistory
+src/*.o
+src/*.dll
+src/*.so
+inst/doc
+doc
+Meta
+zedonked
+/doc/
+/Meta/
+to_be_deleted

@@ -1,0 +1,509 @@
+---
+title: "5-Parameter DDM in `brms` (`Stan`)"
+author: "Kendal Foster and Henrik Singmann"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+bibliography: markdown_stuff/references.bib
+output:
+  rmarkdown::html_vignette:
+    css: markdown_stuff/stile.css
+    toc: false
+    fig_width: 8
+    fig_height: 6
+vignette: >
+  %\VignetteIndexEntry{5-Parameter DDM in `brms` (`Stan`)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{r echo=FALSE}
+req_suggested_packages <- c("brms", "rtdists", "fddm")
+pcheck <- lapply(req_suggested_packages, requireNamespace, 
+                 quietly = TRUE)
+if (any(!unlist(pcheck))) {
+   message("Required package(s) for this vignette are not available/installed and code will not be executed.")
+   knitr::opts_chunk$set(eval = FALSE)
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  comment = "#>"
+)
+op <- options(width = 100, digits = 4)
+```
+
+<div id="TOC">
+<ul>
+  <li><a href="#intro">Introduction</a></li>
+  <li><a href="#cusfam">Custom `brms` Family: `ddm`</a></li>
+  <li><a href="#parrec">Parameter Recovery</a>
+  <ul>
+    <li><a href="#parrec-gendata">Generating Some Data for the Parameter Recovery</a></li>
+    <li><a href="#parrec-est">Estimation (i.e., Sampling)</a></li>
+    <li><a href="#parrec-post">Posterior Predictive Analysis</a></li>
+  </ul></li>
+  <li><a href="#realworld">Fitting Real-World Data</a>
+  <ul>
+    <li><a href="#realworld-loaddata">Load Real-World Data</a></li>
+    <li><a href="#realworld-est">Estimation (i.e., Sampling)</a></li>
+    <li><a href="#realworld-post">Posterior Predictive Analysis</a></li>
+  </ul></li>
+  <li><a href="#references">References</a></li>
+</ul>
+</div>
+
+
+
+
+
+This document illustrates how to use the 5-parameter Diffusion Decision Model (DDM) (cite) with `brms` (and `Stan`) (cite these two packages).
+
+This  implementation of the DDM has the following parameters: $a \in (0, \infty)$ (threshold separation), $v \in (-\infty, \infty)$ (drift rate), $t_0 \in [0, \infty)$ (non-decision time/response time constant), $w \in (0, 1)$ (relative starting point), and $sv \in (0, \infty)$ (inter-trial-variability of drift).
+<br><br>
+
+
+
+
+
+# Introduction {#intro}
+<hr class="sec1">
+
+This section is a brief intro to the DDM and the PDF- in particular how to approximate the PDF. Basically, a summary of the `fddm` paper. Probably broken down into two subsections or so (large and small time, but nothing too complicated or mathsy).
+
+
+
+
+
+# Custom `brms` Family: `ddm` {#cusfam}
+<hr class="sec1">
+
+Let's begin by loading the packages that we'll use.
+
+```{r load-pkgs, eval=TRUE}
+library("brms")
+library("rtdists")
+library("fddm")
+```
+
+The package `brms` contains many distributions, including the Wiener distribution. However, `brms` only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, $sv$). To use the 5-parameter DDM with `brms`, we must define a "custom family" that contains all of the necessary information about the distribution to pass to `Stan`. Note that we have changed the parameter $v$ to $mu$ because `brms` demands that there be a parameter called "mu" in the family. We also changed the parameter `t0` to `ndt` because `brms` does not allow a parameter to end in a number. Each parameter in the family must have a mapping, defined in the `links` argument (in the order defined in `dpars` in the line above). `lb` and `ub` are vectors of the lower and upper bounds of the parameters (in the order defined in `dpars` two lines above), respectively. The argument `type` is the type of data that the distribution handles; in our case, the DDM handles `real` numbers (or `double`s in other programming languages) as opposed to integers (`int`s). The last argument, `vars`, allows us to include other data that are relative to the distribution; as the data are actually tuples of responses and associated response times, this arguments allows us to input a vector of responses as the `resp` variable.
+
+```{r brms-family, eval=TRUE}
+ddm <- custom_family(
+  "ddm", dpars = c("mu", "a", "ndt", "w", "sv"),
+  links = c("identity", "log", "log", "logit", "log"), 
+  lb = c(NA, 0, 0, 0, 0), ub = c(NA, NA, NA, 1, NA),
+  type = "real", vars = "resp[n]"
+)
+```
+
+We must also provide the probability density function for the underlying `Stan` sampler to use. This function is written in the `Stan` language, and we will input it to `brms` later. Note that this function accepts only single real values for each of the inputs (aside from `resp`, which is of the `int` type). For a version of this density function that provides support for vectors of response times (`rt`) and responses (`resp`), see the file `extra_stan_stuff/brms_ddm_stan_funcs.stan`.
+
+```{r brms-stanfuncs, eval=TRUE}
+stan_funs <- "
+real ddm_lpdf(real rt, real v, real a, real ndt, real w, real sv, int resp)
+{
+  // initialize output
+  real logp = 0.0;
+  
+  // check parameter values
+  if (a <= 0 || is_inf(a) || is_nan(a)) return negative_infinity();
+  if (is_inf(v) || is_nan(v)) return negative_infinity();
+  if (ndt < 0 || is_inf(ndt) || is_nan(ndt)) return negative_infinity();
+  if (w <= 0 || w >= 1 || is_nan(w)) return negative_infinity();
+  if (sv < 0 || is_inf(sv) || is_nan(sv)) return negative_infinity();
+  
+  // adjust parameters
+  {
+  real t = rt - ndt;
+  real a_i = a;
+  real sv_i = sv;
+  real v_i = (resp == 1) ? v : -v;
+  real w_i = (resp == 1) ? w : 1 - w;
+  real taa = t / (a_i * a_i);
+  
+  // define variables for use later (have to do it early because of Stan)
+  // constants
+  real log_2_pi_2 = 0.5 * log(2 * pi());
+  real sv_thresh = 0.0;
+  // used in both large-time and small-time
+  real mult = 0.0;
+  real exp_err = 0.0;
+  real gamma = -0.5 * pi() * pi() * taa;
+  real summ = 0.0;
+  int max_int = 1000;
+  // used only in large-time
+  int kl = 0;
+  real k_dbl = 0.0;
+  real bc = 1 / (pi() * sqrt(taa));
+  // used only in small-time
+  real minterms = 0.5 * sqrt(taa) - 0.5 * w_i; // min number of terms, truncates toward 0
+  real term = 0.0;
+  real rj = 0.0;
+  int js = 0;
+  
+  // check large-time number of terms
+  if (sv_i < sv_thresh) {
+    mult = - v_i * a_i * w_i - 0.5 * v_i*v_i * t - 2 * log(a_i);
+  } else {
+    mult = (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i - v_i*v_i * t)
+    / (2 + 2 * sv_i*sv_i * t) - 0.5 * log(1 + sv_i*sv_i * t) - 2 * log(a_i);
+  }
+  exp_err = 0.000001 * exp(-mult);
+  if (bc > max_int) { // boundary condition
+    k_dbl = max_int;
+  } else {
+    if (exp_err * pi() * taa < 1) { // error threshold is low enough
+      k_dbl = sqrt(-2 * log(pi() * taa * exp_err) / (pi() * pi() * taa));
+      if (k_dbl > max_int) {
+        k_dbl = max_int;
+      } else {
+        k_dbl = fmax(k_dbl, bc);
+      }
+    } else { // threshold not low enough, so set to boundary condition
+      k_dbl = bc;
+    }
+  }
+  while (kl < k_dbl) kl += 1;
+  
+  // compare large-time and small-time
+  if (kl <= 1) { // do large-time
+    for(jl in 1:kl) {
+      summ += jl * sin(jl * w_i * pi()) * exp(gamma * jl * jl);
+    }
+    logp += log(pi());
+  } else { // do small-time
+    if (sv_i < sv_thresh) {
+      mult = log(a_i) - log_2_pi_2 - 1.5 * log(t) - v_i * a_i * w_i
+      - 0.5 * v_i*v_i * t;
+    } else {
+      mult = log(a_i) - 1.5 * log(t) - log_2_pi_2
+      - 0.5 * log(1 + sv_i*sv_i * t)
+      + (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i
+      - v_i*v_i * t) / (2 + 2 * sv_i*sv_i * t);
+    }
+    exp_err = 0.000001 * exp(-mult);
+    gamma = -1 / (2 * taa);
+    summ = w_i * exp(gamma * w_i*w_i); // initialize with j=0 term
+    while (js < minterms) {
+      js += 1;
+      rj = 2 * js - w_i;
+      summ -= rj * exp(gamma * rj*rj);
+      rj = 2 * js + w_i;
+      summ += rj * exp(gamma * rj*rj);
+    }
+    js += 1;
+    rj = 2 * js - w_i;
+    term = rj * exp(gamma * rj*rj);
+    summ -= term;
+    while (term > exp_err) {
+      rj = 2 * js + w_i;
+      term = rj * exp(gamma * rj*rj);
+      summ += term;
+      if (term <= exp_err) break;
+      js += 1;
+      rj = 2 * js - w_i;
+      term = rj * exp(gamma * rj*rj);
+      summ -= term;
+    }
+    
+    // check summ and chuck everything in logp
+    if (summ >= 0) {  // if result is negative, don't add to logp
+      logp += mult + log(summ);
+    }
+  }
+  }
+  
+  return logp;
+}
+"
+```
+
+We'll save this in the object `stanvars`, to which we'll add later.
+
+```{r brms-stanvars}
+stanvars <- stanvar(scode = stan_funs, block = "functions")
+```
+
+The last bit of prep work that we need to do in order to run `Stan` sampling is to define the priors on the model parameters. These priors were chosen to be mildly informative, as we have an idea of the reasonable range of the parameters. Note that the prior for the non-decision time (`ndt`) technically extends to positive infinity, but in practice the non-decision time is bounded above by the smallest response time in the dataset.
+
+```{r brms-priors}
+priors <- c(
+  set_prior("normal(0, 2.5)", class = "Intercept"), # for mu (which is v)
+  set_prior("gamma(3, 1.5)", class = "a"),
+  set_prior("gamma(2, 4)", class = "ndt"),
+  set_prior("beta(2, 2)", class = "w"),
+  set_prior("gamma(2, 1)", class = "sv")
+)
+```
+
+<a id="brms-pp"></a>
+
+Although we could begin with `Stan` sampling now, we'll instead define two functions that will later help us with the posterior analysis.
+
+First, we define the log-likelihood function (to be used in `loo`). Note the particular naming scheme used for the function name and the specific arguments the function expects. This log-likelihood function requires the calculation of the 5-parameter DDM probability density function; for this calculation, we use the package `fddm`.
+
+```{r brms-loglik}
+log_lik_ddm <- function(i, prep) {
+  mu <- brms::get_dpar(prep, "mu", i = i)
+  a <- brms::get_dpar(prep, "a", i = i)
+  w <- brms::get_dpar(prep, "w", i = i)
+  ndt <- brms::get_dpar(prep, "ndt", i = i)
+  sv <- brms::get_dpar(prep, "sv", i = i)
+  y <- prep$data$Y[i]
+  resp <- prep$data$resp[i]
+  fddm::dfddm(y, resp, a, mu, ndt, w, sv, log = TRUE)
+}
+```
+
+Second, we define the posterior predictive function (to be used in `pp_check`). Again, note the particular naming scheme used for the function name and the specific arguments the function expects. We use the package `rtdists` to generate random responses and associated response times in this function.
+
+```{r brms-postpred}
+posterior_predict_ddm <- function(i, prep, negative_rt = FALSE, ...) {
+  if (!require("rtdists")) {
+    stop("Package 'rtdists' must be installed for the function 'posterior_predict_ddm'.")
+  }
+  
+  v <- as.numeric(brms::get_dpar(prep, "mu", i = i))
+  a <- as.numeric(brms::get_dpar(prep, "a", i = i))
+  w <- as.numeric(brms::get_dpar(prep, "w", i = i))
+  t0 <- as.numeric(brms::get_dpar(prep, "ndt", i = i))
+  sv <- as.numeric(brms::get_dpar(prep, "sv", i = i))
+  n <- max(lengths(list(v, a, w, t0, sv)), 1) # I'm pretty sure it's always 1
+  
+  out <- rtdists::rdiffusion(
+    n = n,
+    a = a,
+    v = v,
+    t0 = t0,
+    z = w * a,
+    sv = sv
+  )
+  colnames(out) <- c("q", "resp")
+
+  if (negative_rt) { # code "lower" responses as negative RTs
+    out[["q"]] <- out[["q"]] * ifelse(out[["resp"]] == "upper", 1, -1)
+  }
+  
+  return(out[["q"]])
+}
+```
+
+
+
+
+
+# Parameter Recovery {#parrec}
+<hr class="sec1">
+
+Now that we've got our custom family ready in `brms`, we'll do a basic parameter recovery to show that everything works as expected.
+
+
+
+
+
+## Generating Some Data for the Parameter Recovery {#parrec-gendata}
+
+Using the package `rtdists`, we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.
+
+```{r pr-gendata, eval=FALSE, include=TRUE}
+a <- 1
+v <- -2
+t0 <- 0.3
+w <- 0.5 # rtdists uses z = w*a, defaults to a/2
+sv <- 0.8
+N <- 1000
+set.seed(1234567)
+par_rec_data <- rtdists::rdiffusion(n = N, a = a, v = v, t0 = t0, sv = sv)
+```
+
+```{r pr-savegendata, eval=FALSE, include=FALSE}
+saveRDS(par_rec_data,
+        file = file.path(getwd(), "fits", "parameter_recovery_data.RDS"))
+```
+
+```{r pr-readgendata, eval=TRUE, include=FALSE}
+par_rec_data <- readRDS(file.path(getwd(), "fits",
+                                  "parameter_recovery_data.RDS"))
+```
+
+Next, we need to update our `stanvars` object to incorporate the data we just generated
+
+```{r pr-stanvars}
+stanvars_pr <- stanvars +
+  stanvar(x = as.integer(par_rec_data[["response"]]), 
+          name = "resp", scode = "int resp[N];")
+```
+
+If we desire, we may check the `Stan` code that `brms` will generate to do the sampling. This step is optional, but it is a good opportunity to catch errors that we made in the code.
+
+```{r pr-check-stancode, eval=FALSE, include=TRUE}
+make_stancode(rt ~ 1,
+              data = par_rec_data,
+              family = ddm,
+              stanvars = stanvars_pr, 
+              prior = priors
+              )
+```
+
+
+
+## Estimation (i.e., Sampling) {#parrec-est}
+
+Now we let `brms` call `Stan` to run its sampling algorithm and generate estimates for the model parameters. Estimation usually takes on the scale of 90 seconds per chain with 2000 iterations and the default control options (i.e., `max_treedepth = 10` and `adapt_delta = 0.8`). Because this process can take a little while, we can also load the fit from file.
+
+```{r pr-sampling, eval=FALSE, include=TRUE}
+fit_parrec_5par <- brm(rt ~ 1,
+                       family = ddm,
+                       prior = priors,
+                       stanvars = stanvars_pr,
+                       data = par_rec_data,
+                       chains = 1,
+                       iter = 2000,
+                       warmup = 1000,
+                       thin = 1,
+                       cores = getOption("mc.cores", 1),
+                       control = list(
+                         max_treedepth = 10,
+                         adapt_delta = 0.8
+                         )
+                       )
+```
+
+```{r pr-check-if-already-fit, eval=TRUE, include=FALSE}
+if (file.exists(file.path(getwd(), "fits", "fit_parrec_5par.RDS"))) {
+  fit_parrec_5par <- readRDS(file = file.path(getwd(), "fits",
+                                              "fit_parrec_5par.RDS"))
+} else { # run fit
+  fit_parrec_5par <- brm(rt ~ 1,
+                         family = ddm,
+                         prior = priors,
+                         stanvars = stanvars_pr,
+                         data = par_rec_data,
+                         chains = 1,
+                         iter = 2000,
+                         warmup = 1000,
+                         thin = 1,
+                         cores = getOption("mc.cores", 1),
+                         control = list(
+                           max_treedepth = 10,
+                           adapt_delta = 0.8
+                           )
+                         )
+}
+saveRDS(fit_parrec_5par,
+        file = file.path(getwd(),"fits", "fit_parrec_5par.RDS"))
+```
+
+We will also save the fit in case we need it for future use.
+
+```{r pr-save-fit, eval=FALSE, include=TRUE}
+saveRDS(fit_parrec_5par,
+        file = file.path(getwd(), "fits", "fit_parrec_5par.RDS"))
+```
+
+
+
+## Posterior Predictive Analysis {#parrec-post}
+
+We will use the two functions that [we defined previously](#brms-pp) (the log-likelihood function and the posterior predictive function) to aid `brms` with further analysis of our custom family.
+
+The `loo` function can compare two models; in our case, we will use it to compare the 5-parameter DDM against the 4-parameter DDM.
+
+First we load the 4-parameter fit (done analogously to the 5-parameter version in file `parameter_recovery_4_par.R`).
+
+```{r pr-load-4par}
+fit_parrec_4par <- readRDS(file = file.path(getwd(), "fits",
+                                            "fit_parrec_4par.RDS"))
+```
+
+Before we run loo, we need to define another log-likelihood function for the 4-parameter DDM.
+
+```{r pr-ll-loo}
+log_lik_ddm4 <- function(i, prep) {
+  mu <- brms::get_dpar(prep, "mu", i = i)
+  a <- brms::get_dpar(prep, "a", i = i)
+  w <- brms::get_dpar(prep, "w", i = i)
+  ndt <- brms::get_dpar(prep, "ndt", i = i)
+  y <- prep$data$Y[i]
+  resp <- prep$data$resp[i]
+  fddm::dfddm(y, resp, a, mu, ndt, w, 0, log = TRUE)
+}
+
+loo(fit_parrec_5par, fit_parrec_4par)
+```
+
+Based on the output of the `loo` function, we can see that the 5-parameter model has an ever so slightly higher estimate for ELPD than the 4-parameter model. However, the standard error on the difference between the ELPD estimates is much larger than the actual difference between the ELPD estimates. Therefore, `loo` suggests that these models perform equally well for the generated data.
+
+Last, we can use the posterior predictive function that [we defined earlier](#brms-pp) to run posterior-predictive checking.
+
+```{r pr-pp}
+pp_check(fit_parrec_5par)
+```
+
+
+
+
+
+# Fitting Real-World Data {#realworld}
+<hr class="sec1">
+
+Now we'll try fitting some actual data, because this is how the software is intended to be used.
+
+```{r rw-pkg-data, eval=FALSE}
+
+```
+
+
+
+## Load Real-World Data {#realworld-loaddata}
+
+Some text.
+
+```{r rw-family, eval=FALSE}
+
+```
+
+
+
+## Estimation (i.e., Sampling) {#realworld-est}
+
+Some text.
+
+```{r rw-prep, eval=FALSE}
+
+```
+
+more text.
+
+```{r rw-sampling, eval=FALSE, warning=FALSE}
+
+```
+
+
+
+## Posterior Predictive Checks {#realworld-post}
+
+Some text.
+
+```{r rw-pp, eval=FALSE}
+
+```
+
+
+
+
+
+</div>
+# {.unlisted .unnumbered}
+#### R Session Info {.unlisted .unnumbered}
+```{r session-info, collapse=TRUE}
+sessionInfo()
+```
+
+```{r reset-options, include=FALSE}
+options(op)  # reset options
+```
+
+
+# References
