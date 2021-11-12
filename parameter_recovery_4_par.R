@@ -9,7 +9,7 @@ ddm4 <- custom_family(
   type = "real", vars = "resp[n]"
 )
 
-stan_funs <- "
+stan_funs4 <- "
 real ddm4_lpdf(real rt, real v, real a, real ndt, real w, int resp)
 {
   // initialize output
@@ -112,13 +112,13 @@ real ddm4_lpdf(real rt, real v, real a, real ndt, real w, int resp)
 }
 "
 
-stanvars <- stanvar(scode = stan_funs, block = "functions")
+stanvars4 <- stanvar(scode = stan_funs4, block = "functions")
 
-priors <- c(
+priors4 <- c(
   set_prior("normal(0, 2.5)", class = "Intercept"), # for mu (which is v)
-  set_prior("gamma(3, 1.5)", class = "a"),
-  set_prior("gamma(2, 4)", class = "ndt"),
-  set_prior("beta(2, 2)", class = "w")
+  set_prior("logistic(0.75, 0.5)", class = "a"),
+  set_prior("logistic(-1, 0.5)", class = "ndt"),
+  set_prior("logistic(0, 0.65)", class = "w")
 )
 
 log_lik_ddm4 <- function(i, prep) {
@@ -134,14 +134,21 @@ log_lik_ddm4 <- function(i, prep) {
 par_rec_data <- readRDS(file.path(getwd(), "fits",
                                   "parameter_recovery_data.RDS"))
 
-stanvars_pr <- stanvars +
+stanvars_pr4 <- stanvars4 +
   stanvar(x = as.integer(par_rec_data[["response"]]), 
           name = "resp", scode = "int resp[N];")
 
-fit_parrec_4par <- brm(rt ~ 1,
+make_stancode(rt ~ 1,
+              data = par_rec_data,
+              family = ddm4,
+              stanvars = stanvars_pr4, 
+              prior = priors4
+)
+
+fit_parrec_4par <- brm(rt | dec() ~ 1,
                        family = ddm4,
-                       prior = priors,
-                       stanvars = stanvars_pr,
+                       prior = priors4,
+                       stanvars = stanvars_pr4,
                        data = par_rec_data,
                        chains = 1,
                        iter = 2000,
