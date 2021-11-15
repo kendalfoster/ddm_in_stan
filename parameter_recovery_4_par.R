@@ -145,7 +145,7 @@ make_stancode(rt ~ 1,
               prior = priors4
 )
 
-fit_parrec_4par <- brm(rt | dec() ~ 1,
+fit_parrec_4par <- brm(rt ~ 1,
                        family = ddm4,
                        prior = priors4,
                        stanvars = stanvars_pr4,

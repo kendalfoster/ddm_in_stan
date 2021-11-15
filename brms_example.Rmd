@@ -427,6 +427,33 @@ log_lik_ddm4 <- function(i, prep) {
   resp <- prep$data$resp[i]
   fddm::dfddm(y, resp, a, mu, ndt, w, 0, log = TRUE)
 }
+
+posterior_predict_ddm4 <- function(i, prep, negative_rt = FALSE, ...) {
+  if (!require("rtdists")) {
+    stop("Package 'rtdists' must be installed for the function 'posterior_predict_ddm'.")
+  }
+  
+  v <- as.numeric(brms::get_dpar(prep, "mu", i = i))
+  a <- as.numeric(brms::get_dpar(prep, "a", i = i))
+  w <- as.numeric(brms::get_dpar(prep, "w", i = i))
+  t0 <- as.numeric(brms::get_dpar(prep, "ndt", i = i))
+  n <- max(lengths(list(v, a, w, t0)), 1) # I'm pretty sure it's always 1
+  
+  out <- rtdists::rdiffusion(
+    n = n,
+    a = a,
+    v = v,
+    t0 = t0,
+    z = w * a
+  )
+  colnames(out) <- c("q", "resp")
+
+  if (negative_rt) { # code "lower" responses as negative RTs
+    out[["q"]] <- out[["q"]] * ifelse(out[["resp"]] == "upper", 1, -1)
+  }
+  
+  return(out[["q"]])
+}
 ```
 
 The priors are kinda weird because they're transformed. So we fiddled around with them until we got something that we thought was reasonable. The priors not only represent our beliefs as to approximately what the parameter values should be, but they also assist the sampler in choosing a suitable initial value for each parameter. Here's an example of how each prior looks:
@@ -719,11 +746,11 @@ saveRDS(fit_parrec_wiener,
         file = file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))
 ```
 
-From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took just over 60 seconds per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
+From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took about 40 seconds per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
 
 Our 4-parameter and the native 4-parameter Wiener yield very similar estimates.
 
-If there is variability in the drift rate in the data, our 5-parameter captures this whereas the native 4-parameter Wiener biases the estimates of the drift rate parameter $v$; the other parameters are not biased.
+If there is variability in the drift rate in the data (which there is in the generated data), our 5-parameter captures this whereas the native 4-parameter Wiener biases the estimates of the drift rate parameter $v$; the other parameters are not biased.
 
 
 
@@ -749,16 +776,21 @@ Third, we'll compare the custom 5-parameter variant to the native 4-parameter Wi
 loo(fit_parrec_5par, fit_parrec_wiener)
 ```
 
-Based on the output of the `loo` function, we can see that the 5-parameter model has an ever so slightly higher estimate for ELPD than the 4-parameter model. However, the standard error on the difference between the ELPD estimates is much larger than the actual difference between the ELPD estimates. Therefore, `loo` suggests that these models perform equally well for the generated data.
+Based on the output of the `loo` function, we can see that the 5-parameter model has an ever so slightly higher estimate for ELPD than the 4-parameter models. However, the standard error on the difference between the ELPD estimates is much larger than the actual difference between the ELPD estimates. Therefore, `loo` suggests that these models perform equally well for the generated data. The main difference between the 5-parameter and 4-parameter models is potential biasing of the drift rate $v$ if its variability is not included in the model (parameter $sv$).
 
 Last, we can use the posterior predictive function that [we defined earlier](#brms-pp) to run posterior-predictive checking for each of the three models
 
-```{r pr-pp}
+```{r pr-pp-5par}
 pp_check(fit_parrec_5par)
-pp_check(fit_parrec_4par)
-pp_check(fit_parrec_wiener)
 ```
 
+```{r pr-pp-4par}
+pp_check(fit_parrec_4par)
+```
+
+```{r pr-pp-4parw}
+pp_check(fit_parrec_wiener)
+```
 
 
 
