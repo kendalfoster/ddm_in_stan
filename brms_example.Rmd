@@ -84,6 +84,9 @@ Let's begin by loading the packages that we'll use.
 library("brms")
 library("rtdists")
 library("fddm")
+library("bayestestR")
+library("ggplot2")
+library("cowplot")
 ```
 
 The package `brms` contains many distributions, including the Wiener distribution. However, `brms` only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, $sv$). To use the 5-parameter DDM with `brms`, we must define a "custom family" that contains all of the necessary information about the distribution to pass to `Stan`. However, we will compare the custom 5-parameter variant with the 4-parameter variant that is native in `brms`. In addition, we will also define a custom family for the 4-parameter variant using the PDF algorithm from the `fddm` package; we will compare this variant to the native 4-parameter variant as well as our other custom family for the 5-parameter variant. After defining the custom family for the 5-parameter variant, we will define the custom family for the 4-parameter variant (the process will be nearly identical).
@@ -234,10 +237,10 @@ The last bit of prep work that we need to do in order to run `Stan` sampling is 
 ```{r brms-priors}
 priors <- c(
   set_prior("normal(0, 2.5)", class = "Intercept"), # for mu (which is v)
-  set_prior("gamma(3, 1.5)", class = "a"),
-  set_prior("gamma(2, 4)", class = "ndt"),
-  set_prior("beta(2, 2)", class = "w"),
-  set_prior("gamma(2, 1)", class = "sv")
+  set_prior("logistic(0.75, 0.5)", class = "a"),
+  set_prior("logistic(-1, 0.5)", class = "ndt"),
+  set_prior("logistic(0, 0.67)", class = "w"),
+  set_prior("logistic(-0.5, 0.5)", class = "sv")
 )
 ```
 
@@ -424,6 +427,58 @@ log_lik_ddm4 <- function(i, prep) {
   resp <- prep$data$resp[i]
   fddm::dfddm(y, resp, a, mu, ndt, w, 0, log = TRUE)
 }
+```
+
+The priors are kinda weird because they're transformed. So we fiddled around with them until we got something that we thought was reasonable. The priors not only represent our beliefs as to approximately what the parameter values should be, but they also assist the sampler in choosing a suitable initial value for each parameter. Here's an example of how each prior looks:
+
+```{r brms-priors}
+n <- 1e5
+
+p_a <- ggplot(data = data.frame(logis = exp(rlogis(n, location = 0.75, scale = 0.5)))) +
+  geom_histogram(aes(x = logis), binwidth = 0.25, boundary = 0, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 10)) +
+  labs(x = "a, threshold separation", y = "Count") +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+p_ndt <- ggplot(data = data.frame(logis = exp(rlogis(n, location = -1, scale = 0.5)))) +
+  geom_histogram(aes(x = logis), binwidth = 0.05, boundary = 0, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(x = "ndt, non-decision time", y = "Count") +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+p_w <- ggplot(data = data.frame(logis = plogis(rlogis(n, location = 0, scale = 2/3)))) +
+  geom_histogram(aes(x = logis), binwidth = 0.05, boundary = 0, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(x = "w, initial bias", y = "Count") +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+p_sv <- ggplot(data = data.frame(logis = exp(rlogis(n, location = -0.5, scale = 0.5)))) +
+  geom_histogram(aes(x = logis), binwidth = 0.1, boundary = 0, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 2.5)) +
+  labs(x = "sv, variability in the drift rate", y = "Count") +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+cowplot::plot_grid(p_a, p_ndt, p_sv, p_w, ncol = 2)
 ```
 
 
@@ -664,7 +719,7 @@ saveRDS(fit_parrec_wiener,
         file = file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))
 ```
 
-From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took just over a minute per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
+From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took just over 60 seconds per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
 
 
 
@@ -709,48 +764,109 @@ pp_check(fit_parrec_wiener)
 
 Now we'll try fitting some actual data, because this is how the software is intended to be used.
 
-```{r rw-pkg-data, eval=FALSE}
-
-```
-
 
 
 ## Load Real-World Data {#realworld-loaddata}
 
-Some text.
+Load the speed-accuracy data from the `rtdists` package and only consider the frequency "high" for words and non-words. Also update the stanvars to include this dataset.
 
-```{r rw-family, eval=FALSE}
+```{r rw-data}
+data(speed_acc, package = "rtdists")
+speed_acc <- droplevels(speed_acc[!speed_acc$censor,]) # remove extreme RTs
+speed_acc <- droplevels(speed_acc[ speed_acc$frequency %in% 
+                                     c("high", "nw_high"),])
 
+stanvars_rw <- stanvars +
+  stanvar(x = as.integer(speed_acc[["response"]]), 
+          name = "resp", scode = "int resp[N];")
 ```
 
 
 
 ## Estimation (i.e., Sampling) {#realworld-est}
 
-Some text.
+We need to define the modelling formula and set the priors.
 
-write code for estimating (probably should have priors for all mus)
+```{r rw-prep}
+formula <- brmsformula(rt | dec(response2) ~ 0 + condition:frequency + 
+                            (0 + condition:frequency|p|id), 
+                       bs ~ 0 + condition + (0 + condition|p|id), 
+                       ndt ~ 0 + condition + (0 + condition|p|id),
+                       bias ~ 0 + condition + (0 + condition|p|id))
 
-sv ~ 1 + 1|id
-
-```{r rw-prep, eval=FALSE}
-
+priors <- c(
+  set_prior("normal(0, 2.5)", class = "b"), # for mu (which is v)
+  set_prior("logistic(0.75, 0.5)", class = "b", dpar = "a"),
+  set_prior("logistic(-1, 0.5)", class = "b", dpar = "ndt"),
+  set_prior("logistic(0, 0.67)", class = "b", dpar = "w"),
+  set_prior("logistic(-0.5, 0.5)", class = "sd", dpar = "sv")
+)
 ```
 
-more text.
+Now we run the sampling.
 
-```{r rw-sampling, eval=FALSE, warning=FALSE}
+```{r rw-sampling5, eval=FALSE, include=TRUE}
+fit_rwdata_5par <- brm(formula,
+                       family = ddm,
+                       prior = priors,
+                       stanvars = stanvars_rw,
+                       data = speed_acc,
+                       chains = 1,
+                       iter = 500,#2000
+                       warmup = 250,#1000
+                       thin = 1,
+                       cores = getOption("mc.cores", 1),
+                       control = list(
+                         max_treedepth = 10,
+                         adapt_delta = 0.8
+                       )
+)
+```
 
+```{r rw-check-if-already-fit5, eval=TRUE, include=FALSE}
+if (file.exists(file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))) {
+  fit_rwdata_5par <- readRDS(file = file.path(getwd(), "fits",
+                                              "fit_rwdata_5par.RDS"))
+} else { # run fit
+  fit_rwdata_5par <- brm(formula,
+                         family = ddm,
+                         prior = priors,
+                         stanvars = stanvars_rw,
+                         data = speed_acc,
+                         chains = 1,
+                         iter = 500,#2000
+                         warmup = 250,#1000
+                         thin = 1,
+                         cores = getOption("mc.cores", 1),
+                         control = list(
+                           max_treedepth = 10,
+                           adapt_delta = 0.8
+                         )
+)
+  saveRDS(fit_rwdata_5par,
+        file = file.path(getwd(),"fits", "fit_rwdata_5par.RDS"))
+}
+```
+
+```{r rw-save-fit5, eval=FALSE, include=TRUE}
+saveRDS(fit_rwdata_5par,
+        file = file.path(getwd(),"fits", "fit_rwdata_5par.RDS"))
 ```
 
 
 
 ## Posterior Predictive Checks {#realworld-post}
 
-Some text.
+LOO
 
-```{r rw-pp, eval=FALSE}
+```{r rw-loo}
+loo(fit_rwdata_5par)
+```
 
+Posterior predictive check
+
+```{r rw-pp}
+pp_check(fit_rwdata_5par)
 ```
 
 

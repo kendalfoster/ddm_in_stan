@@ -133,7 +133,7 @@ priors <- c(
   set_prior("normal(0, 2.5)", class = "Intercept"), # for mu (which is v)
   set_prior("logistic(0.75, 0.5)", class = "a"),
   set_prior("logistic(-1, 0.5)", class = "ndt"),
-  set_prior("logistic(0, 0.65)", class = "w"),
+  set_prior("logistic(0, 0.67)", class = "w"),
   set_prior("logistic(-0.5, 0.5)", class = "sv")
 )
 
