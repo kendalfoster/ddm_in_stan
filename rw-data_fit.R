@@ -181,6 +181,12 @@ speed_acc$resp <- as.integer(speed_acc$response)
 speed_acc <- speed_acc[speed_acc[["id"]] == 1, ]
 
 
+
+stanvars_rw <- stanvars +
+  stanvar(x = as.integer(speed_acc[["resp"]]), 
+          name = "resp", scode = "int resp[N];")
+
+
 library("bayestestR")
 options(contrasts = c('contr.orthonorm', 'contr.poly'))
 model.matrix(~condition*frequency, speed_acc)
@@ -232,9 +238,6 @@ str(tmp_dat)
 # vector[K_w] b_w;  // population-level effects
 # real Intercept_sv;  // temporary intercept for centered predictors
 
-stanvars_rw <- stanvars +
-  stanvar(x = as.integer(speed_acc[["resp"]]), 
-          name = "resp", scode = "int resp[N];")
 
 init_fun <- function() {
   list(
