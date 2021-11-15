@@ -243,7 +243,7 @@ init_fun <- function() {
   list(
     b = rnorm(tmp_dat$K, 0, 0.25),
     b_a = c(rnorm(1, log(1), 0.1), rnorm(tmp_dat$K_a-1, 0, 0.1)),
-    b_ndt = exp(c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01))),
+    b_ndt = c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01)),
     b_w = c(runif(1, logit_scaled(0.4), logit_scaled(0.6)), rnorm(tmp_dat$K_w-1, 0, 0.01)),
     Intercept_sv = rnorm(1, log(0.1), 0.01)
   )
@@ -252,18 +252,17 @@ init_fun <- function() {
 fit_rwdata_5par <- brm(formula,
                        family = ddm,
                        prior = priors,
-                       sample_prior = "only",
                        inits = init_fun,
                        stanvars = stanvars_rw,
                        data = speed_acc,
-                       chains = 1,
+                       chains = 1,#6
                        iter = 500,#1000
                        warmup = 250,#500
                        thin = 1,
                        cores = getOption("mc.cores", 1),#6
                        control = list(
                          max_treedepth = 15,
-                         adapt_delta = 0.8
+                         adapt_delta = 0.99
                        )
 )
 
