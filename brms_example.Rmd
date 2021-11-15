@@ -721,6 +721,10 @@ saveRDS(fit_parrec_wiener,
 
 From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took just over 60 seconds per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
 
+Our 4-parameter and the native 4-parameter Wiener yield very similar estimates.
+
+If there is variability in the drift rate in the data, our 5-parameter captures this whereas the native 4-parameter Wiener biases the estimates of the drift rate parameter $v$; the other parameters are not biased.
+
 
 
 ## Posterior Predictive Analysis {#parrec-post}

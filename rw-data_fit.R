@@ -178,7 +178,7 @@ speed_acc <- droplevels(speed_acc[!speed_acc$censor,]) # remove extreme RTst
 speed_acc <- droplevels(speed_acc[ speed_acc$frequency %in% 
                                      c("high", "nw_high"),])
 speed_acc$resp <- as.integer(speed_acc$response)
-speed_acc <- speed_acc[speed_acc[["id"]] == 1, ]
+# speed_acc <- speed_acc[speed_acc[["id"]] == 1, ]
 
 
 
@@ -189,7 +189,7 @@ stanvars_rw <- stanvars +
 
 library("bayestestR")
 options(contrasts = c('contr.orthonorm', 'contr.poly'))
-model.matrix(~condition*frequency, speed_acc)
+# model.matrix(~condition*frequency, speed_acc)
 
 # formula <- brmsformula(rt ~ 0 + condition:frequency +
 #                             (0 + condition:frequency|p|id), 
@@ -204,6 +204,13 @@ formula <- brmsformula(rt ~ condition*frequency,
                        sv ~ 1,
                        center = FALSE
                        )
+formula <- brmsformula(rt ~ condition*frequency + (condition*frequency|p|id),
+                       a ~ 0 + Intercept + condition + (condition|p|id),
+                       ndt ~ 0 + Intercept + condition + (condition|p|id),
+                       w ~ 0 + Intercept + condition + (condition|p|id),
+                       sv ~ 1 + (1|p|id),
+                       center = FALSE
+)
 
 
 get_prior(formula,
@@ -245,7 +252,11 @@ init_fun <- function() {
     b_a = c(rnorm(1, log(1), 0.1), rnorm(tmp_dat$K_a-1, 0, 0.1)),
     b_ndt = c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01)),
     b_w = c(runif(1, logit_scaled(0.4), logit_scaled(0.6)), rnorm(tmp_dat$K_w-1, 0, 0.01)),
-    Intercept_sv = rnorm(1, log(0.1), 0.01)
+    Intercept_sv = rnorm(1, log(0.1), 0.01),
+    sd_1 = runif(tmp_dat$M_1, 0.5, 1),
+    z_1 = matrix(rnorm(tmp_dat$M_1*tmp_dat$N_1, 0, 0.01),
+                 tmp_dat$M_1, tmp_dat$N_1),
+    L_1 = diag(tmp_dat$M_1)
   )
 }
 
@@ -262,7 +273,7 @@ fit_rwdata_5par <- brm(formula,
                        cores = getOption("mc.cores", 1),#6
                        control = list(
                          max_treedepth = 15,
-                         adapt_delta = 0.99
+                         adapt_delta = 0.8
                        )
 )
 
