@@ -27,8 +27,8 @@ real ddm_lpdf(real rt, real v, real a, real ndt, real w, real sv, int resp)
   real t = rt - ndt;
   real a_i = a;
   real sv_i = sv;
-  real v_i = (resp == 1) ? v : -v;
-  real w_i = (resp == 1) ? w : 1 - w;
+  real v_i = (resp < 1.5) ? v : -v;
+  real w_i = (resp < 1.5) ? w : 1 - w;
   real taa = t / (a_i * a_i);
   
   // define variables for use later (have to do it early because of Stan)
@@ -174,16 +174,16 @@ posterior_predict_ddm <- function(i, prep, negative_rt = FALSE, ...) {
 
 
 data(speed_acc, package = "rtdists")
-speed_acc <- droplevels(speed_acc[!speed_acc$censor,]) # remove extreme RTs
+speed_acc <- droplevels(speed_acc[!speed_acc$censor,]) # remove extreme RTst
 speed_acc <- droplevels(speed_acc[ speed_acc$frequency %in% 
                                      c("high", "nw_high"),])
 speed_acc$resp <- as.integer(speed_acc$response)
 speed_acc <- speed_acc[speed_acc[["id"]] == 1, ]
 
 
-# library("bayestestR")
-# options(contrasts = c('contr.orthonorm', 'contr.poly'))
-# model.matrix(~condition*frequency, speed_acc)
+library("bayestestR")
+options(contrasts = c('contr.orthonorm', 'contr.poly'))
+model.matrix(~condition*frequency, speed_acc)
 
 # formula <- brmsformula(rt ~ 0 + condition:frequency +
 #                             (0 + condition:frequency|p|id), 
@@ -191,73 +191,75 @@ speed_acc <- speed_acc[speed_acc[["id"]] == 1, ]
 #                        ndt ~ 0 + condition + (0 + condition|p|id),
 #                        w ~ 0 + condition + (0 + condition|p|id),
 #                        sv ~ 1 + (1|id) )
+formula <- brmsformula(rt ~ condition*frequency,
+                       a ~ 0 + Intercept + condition,
+                       ndt ~ 0 + Intercept + condition,
+                       w ~ 0 + Intercept + condition,
+                       sv ~ 1,
+                       center = FALSE
+                       )
 
 
-get_prior(rt ~ 1,
+get_prior(formula,
           data = speed_acc,
           family = ddm)
 
-# priors <- c(
-#   set_prior("normal(0, 2.5)", class = "b"), # for mu (which is v)
-#   set_prior("logistic(0.75, 0.5)", class = "b", dpar = "a"),
-#   set_prior("logistic(-1, 0.5)", class = "b", dpar = "ndt"),
-#   set_prior("logistic(0, 0.67)", class = "b", dpar = "w"),
-#   set_prior("logistic(-0.5, 0.5)", class = "sd", dpar = "sv")
-# )
 priors <- c(
-  set_prior("normal(0, 2.5)", class = "Intercept"), # for mu (which is v)
-  set_prior("logistic(0.75, 0.5)", class = "a"),
-  set_prior("logistic(-1, 0.5)", class = "ndt"),
-  set_prior("logistic(0, 0.67)", class = "w"),
-  set_prior("logistic(-0.5, 0.5)", class = "sv")
+set_prior("student_t(3, 0, 2.5)", class = "b", coef = "Intercept"), # for mu (which is v)
+  set_prior("logistic(0.75, 0.5)", coef = "Intercept", dpar = "a"),
+  set_prior("logistic(-1, 0.5)", coef = "Intercept", dpar = "ndt"),
+  set_prior("logistic(0, 0.67)", coef = "Intercept", dpar = "w"),
+  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv")
 )
 
-# make_stancode(formula,
-#               family = ddm,
-#               data = speed_acc,
-#               prior = priors)
-# 
-# 
-# tmp_dat <- make_standata(formula,
-#                          family = ddm,
-#                          data = speed_acc,
-#                          prior = priors)
-# str(tmp_dat)
-# init_fun <- function() {
-#   list(
-#     b = rnorm(tmp_dat$K),
-#     b_a = exp(runif(tmp_dat$K_a, 1, 2)),
-#     b_ndt = exp(runif(tmp_dat$K_ndt, 0.1, 0.15)),
-#     b_w = exp(rnorm(tmp_dat$K_w, 0.5, 1)),
-#     b_sv = exp(runif(tmp_dat$K_sv, 0.1, 0.7))
-#     # sd_1 = runif(tmp_dat$M_1, 0.5, 1),
-#     # z_1 = matrix(rnorm(tmp_dat$M_1*tmp_dat$N_1, 0, 0.01),
-#     #              tmp_dat$M_1, tmp_dat$N_1),
-#     # L_1 = diag(tmp_dat$M_1),
-#     # sd_2 = runif(tmp_dat$M_2, 0.5, 1),
-#     # z_2 = matrix(rnorm(tmp_dat$M_2*tmp_dat$N_2, 0, 0.01),
-#     #              tmp_dat$M_2, tmp_dat$N_2)
-#   )
-# }
+make_stancode(formula,
+              family = ddm,
+              stanvars = stanvars_rw,
+              data = speed_acc,
+              prior = priors)
 
+
+tmp_dat <- make_standata(formula,
+                         family = ddm,
+                         data = speed_acc,
+                         prior = priors)
+str(tmp_dat)
+
+
+# vector[K] b;  // population-level effects
+# vector[K_a] b_a;  // population-level effects
+# vector[K_ndt] b_ndt;  // population-level effects
+# vector[K_w] b_w;  // population-level effects
+# real Intercept_sv;  // temporary intercept for centered predictors
 
 stanvars_rw <- stanvars +
   stanvar(x = as.integer(speed_acc[["resp"]]), 
           name = "resp", scode = "int resp[N];")
 
-fit_rwdata_5par <- brm(rt ~ 1,
+init_fun <- function() {
+  list(
+    b = rnorm(tmp_dat$K, 0, 0.25),
+    b_a = c(rnorm(1, log(1), 0.1), rnorm(tmp_dat$K_a-1, 0, 0.1)),
+    b_ndt = exp(c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01))),
+    b_w = c(runif(1, logit_scaled(0.4), logit_scaled(0.6)), rnorm(tmp_dat$K_w-1, 0, 0.01)),
+    Intercept_sv = rnorm(1, log(0.1), 0.01)
+  )
+}
+
+fit_rwdata_5par <- brm(formula,
                        family = ddm,
                        prior = priors,
-                       # inits = init_fun,
+                       sample_prior = "only",
+                       inits = init_fun,
                        stanvars = stanvars_rw,
                        data = speed_acc,
                        chains = 1,
-                       # iter = 500,#2000
-                       # warmup = 250,#1000
+                       iter = 500,#1000
+                       warmup = 250,#500
                        thin = 1,
-                       cores = getOption("mc.cores", 1),
+                       cores = getOption("mc.cores", 1),#6
                        control = list(
-                         max_treedepth = 10,
+                         max_treedepth = 15,
                          adapt_delta = 0.8
                        )
 )
