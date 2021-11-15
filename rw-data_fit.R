@@ -174,6 +174,7 @@ posterior_predict_ddm <- function(i, prep, negative_rt = FALSE, ...) {
 
 
 data(speed_acc, package = "rtdists")
+# saveRDS(speed_acc, file = file.path(getwd(), "fits", "speed_acc_data.RDS"))
 speed_acc <- droplevels(speed_acc[!speed_acc$censor,]) # remove extreme RTst
 speed_acc <- droplevels(speed_acc[ speed_acc$frequency %in% 
                                      c("high", "nw_high"),])
