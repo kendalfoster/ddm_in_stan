@@ -15,7 +15,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 ```{r echo=FALSE}
-req_suggested_packages <- c("brms", "rtdists", "fddm")
+req_suggested_packages <- c("brms", "rtdists", "fddm", "bayestestR", "ggplot2")
 pcheck <- lapply(req_suggested_packages, requireNamespace, 
                  quietly = TRUE)
 if (any(!unlist(pcheck))) {
@@ -746,11 +746,68 @@ saveRDS(fit_parrec_wiener,
         file = file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))
 ```
 
-From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took about 40 seconds per chain to fit the 4-parameter custom family. Using the 4-parameter Wiener distribution native to `brms` took roughly 40 seconds. All of the fits seem to converge to similarly and adequately recover the parameter values (barring the additional parameter $sv$).
+From the `Stan` output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took about 40 seconds per chain to fit either the 4-parameter custom family DDM or the 4-parameter Wiener family native to `brms`.
 
-Our 4-parameter and the native 4-parameter Wiener yield very similar estimates.
+Now we'll take a quick look at the summaries of the sampling.
 
-If there is variability in the drift rate in the data (which there is in the generated data), our 5-parameter captures this whereas the native 4-parameter Wiener biases the estimates of the drift rate parameter $v$; the other parameters are not biased.
+```{r pr-print4}
+print(fit_parrec_4par)
+print(fit_parrec_wiener)
+```
+
+The 4-parameter custom family and native 4-parameter Wiener family yield extremely similar estimates and successfully recover three of the four parameters; the threshold separation ($a$), non-decision time ($t0$), and initial bias ($w$) are all recovered successfully. The estimates for the drift rate ($v$) are somewhat close to the underlying value in both families, but remain biased ($-1.82$ vs $-2.00$).
+
+```{r pr-print5}
+print(fit_parrec_5par)
+```
+
+The 5-parameter custom family successfully recovers four of the five parameters successfully, with the only exception being the variability in the drift rate ($sv$). The estimates for $sv$ are somewhat close to the underlying value, but there is still moderate uncertainty in this estimate. Importantly, however, the 5-parameter custom family is able to successfully recover the drift rate ($v$) without bias.
+
+We can see the differences in the estimates for the drift rate by plotting histograms of the posterior draws from each family.
+
+```{r pr-plot-v}
+n <- 1000 # number of posterior draws (excluding warmup)
+models <- c("Wiener", "4-par DDM", "5-par DDM")
+colors <- c("#b34d4d", "#4da7b3", "#5cc639")
+
+df_v <- data.frame(
+  model = rep(models, each = n),
+  v = c(
+    rstan::extract(fit_parrec_wiener[["fit"]],
+                   pars = "b_Intercept")[["b_Intercept"]],
+    rstan::extract(fit_parrec_4par[["fit"]],
+                   pars = "b_Intercept")[["b_Intercept"]],
+    rstan::extract(fit_parrec_5par[["fit"]],
+                   pars = "b_Intercept")[["b_Intercept"]]
+  )
+)
+
+ggplot(data = df_v,
+       aes(x = v,
+           color = factor(model, levels = models),
+           fill = factor(model, levels = models))) +
+  geom_density(alpha = 0.5) +
+  scale_color_manual(values = colors, guide = "none") +
+  scale_fill_manual(values = colors,
+                    name = "Model",
+                    labels = c("4-par Wiener", "4-par DDM", "5-par DDM")) +
+  labs(x = "v, drift rate", y = "Posterior Density") +
+  guides(fill = guide_legend(override.aes = list(color = colors))) +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.position = c(0.2, 0.82),
+        legend.box = "vertical",
+        legend.direction = "vertical",
+        legend.background = element_rect(fill = "white"),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 13))
+```
+
+The main difference between the 4-parameter and 5-parameter DDM families (aside from the fitting times) is that the 5-parameter DDM captures variability in the drift rate, whereas the 4-parameter DDM attempts to estimate the variable drift rate by adding a bias. There is no difference in the estimates of the other parameters (threshold separation, non-decision time, initial bias) between the 4-parameter and 5-parameter DDM.
 
 
 
