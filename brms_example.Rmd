@@ -807,6 +807,8 @@ ggplot(data = df_v,
         legend.text = element_text(size = 13))
 ```
 
+This is just some text.
+
 The main difference between the 4-parameter and 5-parameter DDM families (aside from the fitting times) is that the 5-parameter DDM captures variability in the drift rate, whereas the 4-parameter DDM attempts to estimate the drift rate by adding a bias. There is no difference in the estimates of the other parameters (threshold separation, non-decision time, initial bias) between the 4-parameter and 5-parameter DDM.
 
 
