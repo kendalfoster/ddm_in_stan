@@ -153,7 +153,11 @@ priors <- c(
   set_prior("logistic(0.75, 0.5)", coef = "Intercept", dpar = "a"),
   set_prior("logistic(-1, 0.5)", coef = "Intercept", dpar = "ndt"),
   set_prior("logistic(0, 0.67)", coef = "Intercept", dpar = "w"),
-  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv")
+  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv"),
+  set_prior("student_t(4, 0, 0.5)", class = "b"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "a"),
+  set_prior("student_t(4, 0, 0.1)", class = "b", dpar = "ndt"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "w")
 )
 
 tmp_dat <- make_standata(formula,
@@ -192,8 +196,8 @@ fit_rwdata_5par <- brm(formula,
 )
 
 saveRDS(fit_rwdata_5par,
-        file = file.path(getwd(),"fits", "fit_rwdata_5par_2.RDS"))
-# 
-# fit_rwdata_5par <- readRDS(file = file.path(getwd(), "fits",
-#                                             "fit_rwdata_5par.RDS"))
+        file = file.path(getwd(),"fits", "fit_rwdata_5par_1_1.RDS"))
+
+fit_rwdata_5par_1 <- readRDS(file = file.path(getwd(), "fits",
+                                            "fit_rwdata_5par_1.RDS"))
 
