@@ -36,18 +36,23 @@ op <- options(width = 100, digits = 4)
 <div id="TOC">
 <ul>
   <li><a href="#intro">Introduction</a></li>
-  <li><a href="#cusfam">Custom `brms` Family: `ddm`</a></li>
+  <li><a href="#cusfam">Custom `brms` Family: `ddm`</a>
+  <ul>
+    <li><a href="#cusfam-5par">Custom 5-Parameter DDM Definition</a></li>
+    <li><a href="#cusfam-4par">Custom 4-Parameter DDM Definition</a></li>
+    <li><a href="#cusfam-priors">Priors for the Custom Families</a></li>
+  </ul></li>
   <li><a href="#parrec">Parameter Recovery</a>
   <ul>
-    <li><a href="#parrec-gendata">Generating Some Data for the Parameter Recovery</a></li>
-    <li><a href="#parrec-est">Estimation (i.e., Sampling)</a></li>
+    <li><a href="#parrec-data">Generating Some Data for the Parameter Recovery</a></li>
+    <li><a href="#parrec-samp">Estimation (i.e., Sampling)</a></li>
     <li><a href="#parrec-post">Posterior Predictive Analysis</a></li>
   </ul></li>
-  <li><a href="#realworld">Fitting Real-World Data</a>
+  <li><a href="#rewrld">Fitting Real-World Data</a>
   <ul>
-    <li><a href="#realworld-loaddata">Load Real-World Data</a></li>
-    <li><a href="#realworld-est">Estimation (i.e., Sampling)</a></li>
-    <li><a href="#realworld-post">Posterior Predictive Analysis</a></li>
+    <li><a href="#rewrld-data">Load Real-World Data</a></li>
+    <li><a href="#rewrld-samp">Estimation (i.e., Sampling)</a></li>
+    <li><a href="#rewrld-post">Posterior Predictive Analysis</a></li>
   </ul></li>
   <li><a href="#references">References</a></li>
 </ul>
@@ -90,6 +95,10 @@ library("cowplot")
 ```
 
 The package `brms` contains many distributions, including the Wiener distribution. However, `brms` only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, $sv$). To use the 5-parameter DDM with `brms`, we must define a "custom family" that contains all of the necessary information about the distribution to pass to `Stan`. However, we will compare the custom 5-parameter variant with the 4-parameter variant that is native in `brms`. In addition, we will also define a custom family for the 4-parameter variant using the PDF algorithm from the `fddm` package; we will compare this variant to the native 4-parameter variant as well as our other custom family for the 5-parameter variant. After defining the custom family for the 5-parameter variant, we will define the custom family for the 4-parameter variant (the process will be nearly identical).
+
+
+
+## Custom 5-Parameter DDM Definition {#cusfam-5par}
 
 First, we define the custom family "ddm" for the 5-parameter variant.
 
@@ -296,7 +305,11 @@ posterior_predict_ddm <- function(i, prep, negative_rt = FALSE, ...) {
 }
 ```
 
-Next we will define the custom family "ddm4" for the 4-parameter variant that uses the PDF algorithm from the `fddm` package. This process is nearly identical to what we just did for the "ddm" custom family above, but we add the suffix "4" to distinguish it.
+
+
+## Custom 4-Parameter DDM Definition {#cusfam-4par}
+
+Next we will define the custom family "ddm4" for the 4-parameter variant that uses the PDF algorithm from the `fddm` package. This custom family will act as a direct check with the native Wiener family, as well as providing a reference for the time it takes for `Stan` to sample. Defining this 4-parameter custom family is nearly identical to what we just did for the "ddm" custom family above, but we add the suffix "4" to distinguish it.
 
 ```{r brms-ddm4}
 ddm4 <- custom_family(
@@ -456,7 +469,21 @@ posterior_predict_ddm4 <- function(i, prep, negative_rt = FALSE, ...) {
 }
 ```
 
-The priors are kinda weird because they're transformed. So we fiddled around with them until we got something that we thought was reasonable. The priors not only represent our beliefs as to approximately what the parameter values should be, but they also assist the sampler in choosing a suitable initial value for each parameter. Here's an example of how each prior looks:
+
+
+## Priors for the Custom Families {#cusfam-priors}
+
+We defined the priors for the 5-parameter and 4-parameter custom families in the previous sections, but they might appear strange at first glance since most of the parameters are transformed according to their "links" in the call to `brms::custom_family()`. In particular, the parameters `a`, `ndt`, and `sv` (where applicable) use the "log" link function because their valid range is the positive real numbers; the parameter `w` uses the "logit" link function because it must be in the range $(0, 1)$. The parameter `mu` (`v`) uses the identity link function, so it is not transformed.
+
+Since the parameters `a`, `ndt`, `w`, and `sv` are transformed in the custom family definition, their priors are also transformed, and we must consider these transformations when choosing the priors. By inspecting the output of the `brms::make_stancode()` function, we see that the inverse transformation is applied to the priors. For example, consider the prior that we want to place on the parameter `a`; call it $p(a)$. Since `a` uses the "log" link function, $p(a)$ will get transformed, and the sampler will apply the inverse link function and use $exp(p(a))$ as the prior. Working with the exponentiated version of a distribution can be awkward and may require lots of fiddling to adjust near the prior that we want. However, we can make this guess-and-check process a bit easier if we cleverly choose a prior distribution that is both flexible and has a well-known log-version.
+
+This clever choice of prior distribution makes our life easier in two ways. First, it helps with knowing the summary statistics of the distribution that will actually be used, such as the mean, median, mode, and variance of the log-distribution. Understanding how the distribution parameters affect these summary statistics remove a lot of "guessing" from trying to shape the prior. Second, it allows for easy conversion from the log-distribution parameters to the regular distribution parameters; this is necessary as we need to input the non-log version of the distribution into `brms`.
+
+The priors that we chose for the parameters `a`, `ndt`, and `sv` employ this technique by exploiting the relationship between the logistic and log-logistic probability distributions. The logistic distribution is defined such that its CDF is the logistic function; consequently, its PDF is very similar to that of the normal distribution, but with heavier tails. Upon exponentiation, the logistic distribution becomes the log-logistic distribution (i.e., the log of a log-logistic random variable follows the logistic distribution), and we can use the summary statistics to guide our fiddling with the shape of the prior (e.g., the median is just the scale parameter). Once we are satisfied with the shape of the log-logistic prior, we must convert the hyperparameters (of the log-logistic distribution) to the logistic distribution; conveniently, there exists an alternate parameterization for the log-logistic distribution that relates the parameters back to the logistic distribution.
+
+The prior for `w` get transformed by the logistic function, so we just fiddle with that until it looks ok.
+
+Below are the (post-transformation) priors:
 
 ```{r brms-priors}
 n <- 1e5
@@ -519,9 +546,7 @@ Now that we've got our custom families ready in `brms`, we'll do a basic paramet
 
 
 
-
-
-## Generating Some Data for the Parameter Recovery {#parrec-gendata}
+## Generating Some Data for the Parameter Recovery {#parrec-data}
 
 Using the package `rtdists`, we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.
 
@@ -558,7 +583,7 @@ We must also update `stanvars` for our 4-parameter custom family.
 
 ```{r pr-stanvars4}
 stanvars_pr4 <- stanvars4 +
-  stanvar(x = as.integer(par_rec_data[["response"]]), 
+  stanvar(x = as.integer(par_rec_data[["response"]]),
           name = "resp", scode = "int resp[N];")
 ```
 
@@ -568,14 +593,14 @@ If we desire, we may check the `Stan` code that `brms` will generate to do the s
 make_stancode(rt ~ 1,
               data = par_rec_data,
               family = ddm,
-              stanvars = stanvars_pr, 
+              stanvars = stanvars_pr,
               prior = priors
               )
 ```
 
 
 
-## Estimation (i.e., Sampling) {#parrec-est}
+## Estimation (i.e., Sampling) {#parrec-samp}
 
 Now we let `brms` call `Stan` to run its sampling algorithm and generate estimates for the model parameters. Estimation usually takes on the scale of 90 seconds per chain with 2000 iterations and the default control options (i.e., `max_treedepth = 10` and `adapt_delta = 0.8`). Because this process can take a little while, we can also load the fit from file.
 
@@ -852,14 +877,14 @@ pp_check(fit_parrec_wiener)
 
 
 
-# Fitting Real-World Data {#realworld}
+# Fitting Real-World Data {#rewrld}
 <hr class="sec1">
 
 Now we'll try fitting some actual data, because this is how the software is intended to be used.
 
 
 
-## Load Real-World Data {#realworld-loaddata}
+## Load Real-World Data {#rewrld-data}
 
 Load the speed-accuracy data from the `rtdists` package and only consider the frequency "high" for words and non-words. Also update the stanvars to include this dataset.
 
@@ -876,7 +901,7 @@ stanvars_rw <- stanvars +
 
 
 
-## Estimation (i.e., Sampling) {#realworld-est}
+## Estimation (i.e., Sampling) {#rewrld-samp}
 
 We need to define the modelling formula and set the priors.
 
@@ -948,7 +973,7 @@ saveRDS(fit_rwdata_5par,
 
 
 
-## Posterior Predictive Checks {#realworld-post}
+## Posterior Predictive Checks {#rewrld-post}
 
 LOO
 

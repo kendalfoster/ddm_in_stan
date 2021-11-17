@@ -188,6 +188,13 @@ stanvars_pr <- stanvars +
   stanvar(x = as.integer(par_rec_data[["response"]]), 
           name = "resp", scode = "int resp[N];")
 
+make_stancode(rt ~ 1,
+              data = par_rec_data,
+              family = ddm,
+              stanvars = stanvars_pr,
+              prior = priors
+              )
+
 fit_parrec_5par <- brm(rt ~ 1,
                        family = ddm,
                        prior = priors,
