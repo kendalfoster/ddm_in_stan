@@ -4,6 +4,40 @@ n <- 1e5
 
 
 
+##### testing
+library("actuar")
+# logistic is like normal but with heavier tails
+# logistic(mu (location), s (scale))
+# log-logistic(alpha (scale), beta (shape))
+# log-logistic reparameterization:
+  # mu = ln(alpha) -> alpha = exp(mu)
+  # s = 1/beta -> beta = 1/s
+
+df1 <- data.frame(
+  logis = rlogis(n, location = 0.75, scale = 0.5),
+  explogis = exp(rlogis(n, location = 0.75, scale = 0.5)),
+  llogis = actuar::rllogis(n, shape = 1/0.5, scale = exp(0.75))
+)
+
+ggplot(data = df1[df1[["explogis"]] < 100 & df1[["llogis"]] < 100, ]) +
+  geom_histogram(aes(x = explogis), binwidth = 0.25, alpha = 0.7, fill = "blue") +
+  geom_histogram(aes(x = llogis), binwidth = 0.25, alpha = 0.3, fill = "red") +
+  coord_cartesian(xlim = c(0, 10))
+
+df2 <- data.frame(
+  t_dist1 = exp(extraDistr::rlst(n = n, df = 3, mu = 0, sigma = 2.5)),
+  t_dist2 = exp(extraDistr::rlst(n = n, df = 4, mu = 0, sigma = 0.5))
+)
+
+ggplot(data = df2[df2[["t_dist1"]] < 100 & df2[["t_dist2"]] < 100, ]) +
+  geom_histogram(aes(x = t_dist1), binwidth = 0.25, boundary = 0, alpha = 0.7, fill = "blue") +
+  geom_histogram(aes(x = t_dist2), binwidth = 0.25, boundary = 0, alpha = 0.3, fill = "red") +
+  coord_cartesian(xlim = c(0, 5))
+
+#####
+
+
+
 ### a
 mu <- 0.75
 s <- 0.5
@@ -199,3 +233,35 @@ p_sv <- ggplot(data = data.frame(logis = exp(rlogis(n, location = -0.5, scale = 
         axis.title.y = element_text(size = 20))
 
 cowplot::plot_grid(p_a, p_ndt, p_sv, p_w, ncol = 2)
+
+
+
+
+
+
+
+##### testing
+# logistic is like normal but with heavier tails
+
+df1 <- data.frame(
+  t_dist1 = extraDistr::rlst(n = n, df = 3, mu = 0, sigma = 2.5),
+  t_dist2 = extraDistr::rlst(n = n, df = 4, mu = 0, sigma = 0.5)
+)
+
+ggplot(data = df1[df1[["t_dist1"]] < 100 & df1[["t_dist2"]] < 100, ]) +
+  geom_histogram(aes(x = t_dist1), binwidth = 0.25, alpha = 0.7, fill = "blue") +
+  geom_histogram(aes(x = t_dist2), binwidth = 0.25, alpha = 0.3, fill = "red") +
+  coord_cartesian(xlim = c(-10, 10))
+
+df2 <- data.frame(
+  t_dist1 = exp(extraDistr::rlst(n = n, df = 3, mu = 0, sigma = 2.5)),
+  t_dist2 = exp(extraDistr::rlst(n = n, df = 4, mu = 0, sigma = 0.5))
+)
+
+ggplot(data = df2[df2[["t_dist1"]] < 100 & df2[["t_dist2"]] < 100, ]) +
+  geom_histogram(aes(x = t_dist1), binwidth = 0.25, boundary = 0, alpha = 0.7, fill = "blue") +
+  geom_histogram(aes(x = t_dist2), binwidth = 0.25, boundary = 0, alpha = 0.3, fill = "red") +
+  coord_cartesian(xlim = c(0, 5))
+
+#####
+

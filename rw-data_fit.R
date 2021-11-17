@@ -219,11 +219,15 @@ get_prior(formula,
           family = ddm)
 
 priors <- c(
-set_prior("student_t(3, 0, 2.5)", class = "b", coef = "Intercept"), # for mu (which is v)
+  set_prior("student_t(3, 0, 2.5)", class = "b", coef = "Intercept"), # for mu (which is v)
   set_prior("logistic(0.75, 0.5)", coef = "Intercept", dpar = "a"),
   set_prior("logistic(-1, 0.5)", coef = "Intercept", dpar = "ndt"),
   set_prior("logistic(0, 0.67)", coef = "Intercept", dpar = "w"),
-  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv")
+  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv"),
+  set_prior("student_t(4, 0, 0.5)", class = "b"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "a"),
+  set_prior("student_t(4, 0, 0.1)", class = "b", dpar = "ndt"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "w")
 )
 
 make_stancode(formula,
@@ -253,11 +257,11 @@ init_fun <- function() {
     b_a = c(rnorm(1, log(1), 0.1), rnorm(tmp_dat$K_a-1, 0, 0.1)),
     b_ndt = c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01)),
     b_w = c(runif(1, logit_scaled(0.4), logit_scaled(0.6)), rnorm(tmp_dat$K_w-1, 0, 0.01)),
-    Intercept_sv = rnorm(1, log(0.1), 0.01),
-    sd_1 = runif(tmp_dat$M_1, 0.5, 1),
-    z_1 = matrix(rnorm(tmp_dat$M_1*tmp_dat$N_1, 0, 0.01),
-                 tmp_dat$M_1, tmp_dat$N_1),
-    L_1 = diag(tmp_dat$M_1)
+    Intercept_sv = rnorm(1, log(0.1), 0.01)
+    # sd_1 = runif(tmp_dat$M_1, 0.5, 1),
+    # z_1 = matrix(rnorm(tmp_dat$M_1*tmp_dat$N_1, 0, 0.01),
+    #              tmp_dat$M_1, tmp_dat$N_1),
+    # L_1 = diag(tmp_dat$M_1)
   )
 }
 
@@ -268,18 +272,18 @@ fit_rwdata_5par <- brm(formula,
                        stanvars = stanvars_rw,
                        data = speed_acc,
                        chains = 1,#6
-                       iter = 500,#1000
-                       warmup = 250,#500
+                       iter = 1000,#1000
+                       warmup = 500,#500
                        thin = 1,
-                       cores = getOption("mc.cores", 1),#6
+                       cores = 1,#getOption("mc.cores", 1),#6
                        control = list(
                          max_treedepth = 15,
                          adapt_delta = 0.8
                        )
 )
 
-# saveRDS(fit_rwdata_5par,
-#         file = file.path(getwd(),"fits", "fit_rwdata_5par.RDS"))
+saveRDS(fit_rwdata_5par,
+        file = file.path(getwd(),"fits", "fit_rwdata_5par_2.RDS"))
 # 
 # fit_rwdata_5par <- readRDS(file = file.path(getwd(), "fits",
 #                                             "fit_rwdata_5par.RDS"))
