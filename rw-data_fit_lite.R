@@ -184,11 +184,11 @@ fit_rwdata_5par <- brm(formula,
                        inits = init_fun,
                        stanvars = stanvars_rw,
                        data = speed_acc,
-                       chains = 1,#6
+                       chains = 4,#6
                        iter = 1000,#1000
                        warmup = 500,#500
                        thin = 1,
-                       cores = 1,#getOption("mc.cores", 1),#6
+                       cores = 2,#getOption("mc.cores", 1),#6
                        control = list(
                          max_treedepth = 15,
                          adapt_delta = 0.8
@@ -196,8 +196,7 @@ fit_rwdata_5par <- brm(formula,
 )
 
 saveRDS(fit_rwdata_5par,
-        file = file.path(getwd(),"fits", "fit_rwdata_5par_1_1.RDS"))
+        file = file.path(getwd(),"fits", "fit-rwdata-5par_prior-on-intercepts-and-bs.RDS"))
 
-fit_rwdata_5par_1 <- readRDS(file = file.path(getwd(), "fits",
-                                            "fit_rwdata_5par_1.RDS"))
-
+fit_rwdata_5par <- readRDS(file = file.path(getwd(), "fits",
+                                            "fit-rwdata-5par_prior-on-intercepts-and-bs_2-chains.RDS"))
