@@ -1061,7 +1061,7 @@ loo(fit_rwdata_5par)
 
 Posterior predictive check
 
-```{r rw-pp, eval = FALSE}
+```{r rw-pp}
 pp_check(fit_rwdata_5par)
 ```
 
