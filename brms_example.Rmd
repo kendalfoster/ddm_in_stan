@@ -15,7 +15,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 ```{r echo=FALSE}
-req_suggested_packages <- c("brms", "rtdists", "fddm", "bayestestR", "ggplot2")
+req_suggested_packages <- c("brms", "rtdists", "fddm", "RWiener", "bayestestR", "ggplot2")
 pcheck <- lapply(req_suggested_packages, requireNamespace, 
                  quietly = TRUE)
 if (any(!unlist(pcheck))) {
@@ -62,9 +62,9 @@ op <- options(width = 100, digits = 4)
 
 
 
-This document illustrates how to use the 5-parameter Diffusion Decision Model (DDM) (cite) with `brms` (and `Stan`) (cite these two packages).
+This document illustrates how to use the 5-parameter Diffusion Decision Model (DDM) (@ratcliff1978theory) with `brms` (@brms1, @brms2) and `rstan` (@rstan).
 
-This  implementation of the DDM has the following parameters: $a \in (0, \infty)$ (threshold separation), $v \in (-\infty, \infty)$ (drift rate), $t_0 \in [0, \infty)$ (non-decision time/response time constant), $w \in (0, 1)$ (relative starting point), and $sv \in (0, \infty)$ (inter-trial-variability of drift).
+This  implementation of the DDM has the following 5 parameters: $a \in (0, \infty)$ (threshold separation), $v \in (-\infty, \infty)$ (drift rate), $t_0 \in [0, \infty)$ (non-decision time/response time constant), $w \in (0, 1)$ (relative starting point), and $\eta \in (0, \infty)$ (inter-trial-variability of drift).
 <br><br>
 
 
@@ -74,7 +74,58 @@ This  implementation of the DDM has the following parameters: $a \in (0, \infty)
 # Introduction {#intro}
 <hr class="sec1">
 
-This section is a brief intro to the DDM and the PDF- in particular how to approximate the PDF. Basically, a summary of the `fddm` paper. Probably broken down into two subsections or so (large and small time, but nothing too complicated or mathsy).
+The Ratcliff diffusion decision model (DDM) (@ratcliff1978theory; @ratcliff2008diffusion) is the most prominent evidence accumulation model for jointly modelling binary decision and associated response times. It assumes noisy information uptake; this noise is characterized by the Wiener process. The DDM is popular because (a) it utilizes a lot of information from the collected data, which in turn allows us to draw conclusions about the underlying cognitive processes that are assumed to underlie the empirical response time distribution (@voss2008fast) and (b) it provides a good fit to data across different empirical domains (@forstmann2016sequential).
+
+However, this efficient use of information comes at a rather high computational cost. The probability density function (PDF) of the DDM is the density of first-passage times, that is, the time it takes for the Wiener process to first cross a fixed boundary. The computation of the PDF of the first-passage times is computationally expensive because it contains an infinite sum. Of course computers cannot actually evaluate an infinite sum, so several papers have developed approximation methods to this density function (@voss2008fast; @navarro2009fast; @blurton2012fast; @gondan2014even). The different approximation methods provide different truncation rules that guarantee the value of the approximated density function does not differ from its true value by more than a pre-specified error tolerance.
+
+The analytic formulation of the diffusion model PDF originates from @feller1968introduction, who provides its seminal derivation. In this derivation from first principles (i.e., the Wiener process), there is a step that requires taking a limit. @feller1968introduction provides two different – but equivalent – limiting processes that yield two different – but equal – forms of the density function. Each of these forms contains an infinite sum, and they are known individually as the “large-time” density function and the “small-time” density function (@navarro2009fast). As their names suggest, the "large-time" density function is more efficient at handling large response times, and the "small-time" density function is more efficient at calculating small response times. Even though the two distinct forms of the DDM density function are mathematically equivalent, they can produce slightly different results when calculated numerically with a fixed and limited precision.
+
+For the remainder of this section, we will refer to the 5-parameter DDM density function as $f(t | v, \eta, a, w)$. Note that we use $t := t - t_0$ to make the notation cleaner.
+
+
+
+## Large-Time Density Function {#intro-large}
+
+The 5-parameter "large-time" PDF is
+
+\begin{equation} \label{eq:pdf-l}
+f_\ell(t | v, \eta, a, w) = \frac{\pi}{a^2 \sqrt{1 + \eta^2 t}}
+                            \exp{ \left( \frac{\eta^2 a^2 w^2 -2vaw -v^2 t}{2 (1 + \eta^2 t)} \right)}
+														\sum_{j = 1}^{k_\ell} j \sin \left( j w \pi \right) \exp{ \left( -\frac{j^2 \pi^2 t}{2a^2} \right)}
+\end{equation}
+
+The first truncation rule for the infinite sum in this density function was provided by @navarro2009fast; it uses the first $k_\ell$ of the infinite sum. It's still the only one out there.
+
+
+
+## Small-Time Density Function {#intro-small}
+
+The 5-parameter "small-time" PDF is
+
+\begin{equation} \label{eq:pdf-s}
+f_s(t | v, \eta, a, w) = \frac{a}{\sqrt{2 \pi t^3 \left( 1 + \eta^2 t \right)}}
+											 	 \exp{ \left( \frac{\eta^2 a^2 w^2 -2vaw -v^2 t}{2 (1 + \eta^2 t)} \right)}
+											 	 \sum_{j = -k_s}^{k_s} (w + 2j) \exp{ \left( -\frac{a^2}{2t} \left( w + 2j \right)^2 \right)}
+\end{equation}
+
+@navarro2009fast also provided the first truncation rule for the infinite sum in this density function; the truncated sum runs from term $-k_s$ to term $k_s$, $2k + 1$ terms in total. @gondan2014even provided another truncation rule for this infinite sum that follows the same premise, using the first $2k + 1$ terms. In their paper, @gondan2014even mention that the mathematical properties of the sum allow it to potentially be truncated sooner, but then the number of terms required for the truncated sum cannot be pre-calculated.
+
+
+
+## Combining the Large-time and Small-time Density Functions {#intro-combined}
+
+Along with their "large-time" and "small-time" truncation rules, @navarro2009fast also propose a mechanism to switch between the "large-time" and "small-time" PDFs so that the more efficient one is used. Given a pre-defined error tolerance, the mechanism calculates the number of terms required for the "large-time" PDF, $k_\ell$, and the "small-time" PDF, $k_s$; then it uses whichever PDF requires fewer terms. Even though @gondan2014even mentioned exploiting the mathematical properties of the infinite sum in the "small-time" PDF to speed up the approximation, they favored pre-calculating $k_s$ so that the same mechanism could directly compare the efficiency of the "large-time" and "small-time" PDFs.
+
+Instead of precalculating $k_s$, we proposed using a heuristic to represent $k_s$; this way we could save computation time from not calculating $k_s$ and we could still see how efficient the "large-time" PDF could be. Our mechanism for choosing between the "large-time" and "small-time" PDF treats $k_s = 2$, so that if $k_\ell$ is calculated to be $0$ or $1$, then the "large-time" PDF is used; otherwise if $k_\ell > 1$, then the "small-time" PDF is used. We determined the heuristic value $1$ from empirical testing; the results of this testing can be seen in our arXiv paper (@foster2021approximation). Formulaically, it looks like
+
+\begin{equation} \label{eq:pdf-c}
+  f(t | v, \eta, a, w) = \begin{cases}
+                           f_\ell(t | v, \eta, a, w) & \text{ if } k_\ell \le 1\\
+                           f_s(t | v, \eta, a, w) & \text{ if } k_\ell > 1
+                         \end{cases}
+\end{equation}
+
+For a pre-defined error tolerance, this method of combining the "large-time" and "small-time" is not only the fastest in terms of computation time, but it is also the most stable algorithm to use in optimization routines (e.g., fitting the model to data). You can see these results in our arXiv paper (@foster2021approximation). This method is the default in our `fddm` package and is the basis of the `ddm_lpdf()` function that we define in the `Stan` "functions" block (loaded into `rstan` via `brms` through the object `stan_funs` defined [below](#stan-func-def)).
 
 
 
@@ -83,18 +134,21 @@ This section is a brief intro to the DDM and the PDF- in particular how to appro
 # Custom `brms` Family: `ddm` {#cusfam}
 <hr class="sec1">
 
+As `rstan` is a great tool for performing Bayesian analysis, we thought that it should have access to the 5-parameter DDM. Moreover, the popular `R` package `brms` is a widely used interface to `rstan` that natively handles many popular distributions, but it too is missing the 5-parameter DDM. This section will detail how to define the 5-parameter DDM for use in `brms` (and also `rstan`).
+
 Let's begin by loading the packages that we'll use.
 
-```{r load-pkgs, eval=TRUE}
+```{r load-pkgs}
 library("brms")
 library("rtdists")
 library("fddm")
+library("RWiener")
 library("bayestestR")
 library("ggplot2")
 library("cowplot")
 ```
 
-The package `brms` contains many distributions, including the Wiener distribution. However, `brms` only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, $sv$). To use the 5-parameter DDM with `brms`, we must define a "custom family" that contains all of the necessary information about the distribution to pass to `Stan`. However, we will compare the custom 5-parameter variant with the 4-parameter variant that is native in `brms`. In addition, we will also define a custom family for the 4-parameter variant using the PDF algorithm from the `fddm` package; we will compare this variant to the native 4-parameter variant as well as our other custom family for the 5-parameter variant. After defining the custom family for the 5-parameter variant, we will define the custom family for the 4-parameter variant (the process will be nearly identical).
+The package `brms` contains many distributions, including the Wiener distribution, which is equivalent to the DDM; however, `brms` only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, $sv$). To use the 5-parameter DDM with `brms`, we must define a "custom family" that contains all of the necessary information about the distribution to pass to `Stan`. We will compare the custom 5-parameter variant with the 4-parameter variant that is native in `brms`. In addition, we will also define a custom family for the 4-parameter variant using the same algorithm from the 5-parameter variant; we will compare this variant to the native 4-parameter variant as well as our other custom family for the 5-parameter variant. After defining the custom family for the 5-parameter variant, we will define the custom family for the 4-parameter variant (the process will be nearly identical).
 
 
 
@@ -102,7 +156,7 @@ The package `brms` contains many distributions, including the Wiener distributio
 
 First, we define the custom family "ddm" for the 5-parameter variant.
 
-```{r brms-family, eval=TRUE}
+```{r brms-family}
 ddm <- custom_family(
   "ddm", dpars = c("mu", "a", "ndt", "w", "sv"),
   links = c("identity", "log", "log", "logit", "log"), 
@@ -111,11 +165,13 @@ ddm <- custom_family(
 )
 ```
 
-Note that we have changed the parameter $v$ to $mu$ because `brms` demands that there be a parameter called "mu" in the family. We also changed the parameter `t0` to `ndt` because `brms` does not allow a parameter to end in a number. Each parameter in the family must have a mapping, defined in the `links` argument (in the order defined in `dpars` in the line above). `lb` and `ub` are vectors of the lower and upper bounds of the parameters (in the order defined in `dpars` two lines above), respectively. The argument `type` is the type of data that the distribution handles; in our case, the DDM handles `real` numbers (or `double`s in other programming languages) as opposed to integers (`int`s). The last argument, `vars`, allows us to include other data that are relative to the distribution; as the data are actually tuples of responses and associated response times, this arguments allows us to input a vector of responses as the `resp` variable.
+Note that we have changed the parameter $v$ to $mu$ because `brms` demands that there be a parameter called "mu" in the family. We also changed the parameter `t0` to `ndt` because `brms` does not allow a parameter to end in a number. In addition, we changed the parameter $\eta$ to `sv` because that is how it is written in our software package. Each parameter in the family must have a mapping, defined in the `links` argument (in the order defined in `dpars` in the line above). `lb` and `ub` are vectors of the lower and upper bounds of the parameters (in the order defined in `dpars` two lines above), respectively. The argument `type` is the type of data that the distribution handles; in our case, the DDM handles `real` numbers (or `double`s in other programming languages) as opposed to integers (`int`s). The last argument, `vars`, allows us to include other data that are relative to the distribution; as the data are actually tuples of responses and associated response times, this arguments allows us to input a vector of responses as the `resp` variable.
 
 We must also provide the probability density function for the underlying `Stan` sampler to use. This function is written in the `Stan` language, and we will input it to `brms` later. Note that this function accepts only single real values for each of the inputs (aside from `resp`, which is of the `int` type). For a version of this density function that provides support for vectors of response times (`rt`) and responses (`resp`), see the file `extra_stan_stuff/brms_ddm_stan_funcs.stan`.
 
-```{r brms-stanfuncs, eval=TRUE}
+<a id="stan-func-def"></a>
+
+```{r brms-stanfuncs}
 stan_funs <- "
 real ddm_lpdf(real rt, real v, real a, real ndt, real w, real sv, int resp)
 {
@@ -241,7 +297,7 @@ We'll save this in the object `stanvars`, to which we'll add later.
 stanvars <- stanvar(scode = stan_funs, block = "functions")
 ```
 
-The last bit of prep work that we need to do in order to run `Stan` sampling is to define the priors on the model parameters. These priors were chosen to be mildly informative, as we have an idea of the reasonable range of the parameters. Note that the prior for the non-decision time (`ndt`) technically extends to positive infinity, but in practice the non-decision time is bounded above by the smallest response time in the dataset.
+The last bit of prep work that we need to do in order to run `Stan` sampling is to define the priors on the model parameters. These priors were chosen to be mildly informative, as we have an idea of the reasonable range of the parameters. These priors may seem strange in that they support the negative real numbers when the parameters cannot be negative. In the definition of the custom family, we included "link" functions which will transform the parameters and their priors; more details about this can be found [below](#cusfam-priors). Note that the prior for the non-decision time (`ndt`) technically extends to positive infinity, but in practice the non-decision time is bounded above by the smallest response time in the dataset.
 
 ```{r brms-priors}
 priors <- c(
@@ -257,7 +313,7 @@ priors <- c(
 
 Although we could begin with `Stan` sampling now, we'll instead define two functions that will later help us with the posterior analysis.
 
-First, we define the log-likelihood function (to be used in `loo`). Note the particular naming scheme used for the function name and the specific arguments the function expects. This log-likelihood function requires the calculation of the 5-parameter DDM probability density function; for this calculation, we use the package `fddm`.
+First, we define the log-likelihood function (to be used in `loo`). Note the particular naming scheme used for the function name and the specific arguments the function expects. This log-likelihood function requires the calculation of the 5-parameter DDM probability density function; for this calculation, we use the package `fddm` as it contains the most recent implementation of the 5-parameter DDM density function.
 
 ```{r brms-loglik}
 log_lik_ddm <- function(i, prep) {
@@ -481,11 +537,11 @@ This clever choice of prior distribution makes our life easier in two ways. Firs
 
 The priors that we chose for the parameters `a`, `ndt`, and `sv` employ this technique by exploiting the relationship between the logistic and log-logistic probability distributions. The logistic distribution is defined such that its CDF is the logistic function; consequently, its PDF is very similar to that of the normal distribution, but with heavier tails. Upon exponentiation, the logistic distribution becomes the log-logistic distribution (i.e., the log of a log-logistic random variable follows the logistic distribution), and we can use the summary statistics to guide our fiddling with the shape of the prior (e.g., the median is just the scale parameter). Once we are satisfied with the shape of the log-logistic prior, we must convert the hyperparameters (of the log-logistic distribution) to the logistic distribution; conveniently, there exists an alternate parameterization for the log-logistic distribution that relates the parameters back to the logistic distribution.
 
-The prior for `w` get transformed by the logistic function, so we just fiddle with that until it looks ok.
+The prior for `w` gets transformed by the logistic function, so we just fiddle with plotting a prior under its inverse transform until we are satisfied with the shape.
 
 Below are the (post-transformation) priors:
 
-```{r brms-priors}
+```{r brms-priors-plot}
 n <- 1e5
 
 p_a <- ggplot(data = data.frame(logis = exp(rlogis(n, location = 0.75, scale = 0.5)))) +
@@ -542,13 +598,13 @@ cowplot::plot_grid(p_a, p_ndt, p_sv, p_w, ncol = 2)
 # Parameter Recovery {#parrec}
 <hr class="sec1">
 
-Now that we've got our custom families ready in `brms`, we'll do a basic parameter recovery for each of the custom families to show that everything works as expected.
+Now that we've got our custom families ready in `brms`, we'll do a basic parameter recovery for each of the custom families and compare it with the native 4-parameter family to show that everything works as expected.
 
 
 
 ## Generating Some Data for the Parameter Recovery {#parrec-data}
 
-Using the package `rtdists`, we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.
+Using the package `rtdists` (@rtdists), we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.
 
 ```{r pr-gendata, eval=FALSE, include=TRUE}
 a <- 1
@@ -566,7 +622,7 @@ saveRDS(par_rec_data,
         file = file.path(getwd(), "fits", "parameter_recovery_data.RDS"))
 ```
 
-```{r pr-readgendata, eval=TRUE, include=FALSE}
+```{r pr-readgendata, include=FALSE}
 par_rec_data <- readRDS(file.path(getwd(), "fits",
                                   "parameter_recovery_data.RDS"))
 ```
@@ -622,7 +678,7 @@ fit_parrec_5par <- brm(rt ~ 1,
                        )
 ```
 
-```{r pr-check-if-already-fit, eval=TRUE, include=FALSE}
+```{r pr-check-if-already-fit, include=FALSE}
 if (file.exists(file.path(getwd(), "fits", "fit_parrec_5par.RDS"))) {
   fit_parrec_5par <- readRDS(file = file.path(getwd(), "fits",
                                               "fit_parrec_5par.RDS"))
@@ -674,7 +730,7 @@ fit_parrec_4par <- brm(rt ~ 1,
                        )
 ```
 
-```{r pr-check-if-already-fit4, eval=TRUE, include=FALSE}
+```{r pr-check-if-already-fit4, include=FALSE}
 if (file.exists(file.path(getwd(), "fits", "fit_parrec_4par.RDS"))) {
   fit_parrec_4par <- readRDS(file = file.path(getwd(), "fits",
                                               "fit_parrec_4par.RDS"))
@@ -704,7 +760,7 @@ saveRDS(fit_parrec_4par,
         file = file.path(getwd(), "fits", "fit_parrec_4par.RDS"))
 ```
 
-And again, we sample for the native 4-parameter Wiener distribution. Note that sampling a native distribution is more straightforward than a custom family. We only need to define the priors on the model parameters and relabel the generated data.
+And again, we estimate using the native 4-parameter Wiener distribution. Note that sampling a native distribution is more straightforward than a custom family. We only need to define the priors on the model parameters and relabel the generated data.
 
 ```{r pr-prepw}
 priorsw <- c(
@@ -714,8 +770,7 @@ priorsw <- c(
   set_prior("logistic(0, 0.65)", class = "bias")
 )
 
-par_rec_dataw <- readRDS(file.path(getwd(), "fits",
-                                  "parameter_recovery_data.RDS"))
+par_rec_dataw <- par_rec_data
 par_rec_dataw[["response2"]] <- as.integer(par_rec_dataw[["response"]]) - 1
 ```
 
@@ -740,7 +795,7 @@ fit_parrec_wiener <- brm(rt | dec(response2) ~ 1,
                          )
 ```
 
-```{r pr-check-if-already-fitw, eval=TRUE, include=FALSE}
+```{r pr-check-if-already-fitw, include=FALSE}
 if (file.exists(file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))) {
   fit_parrec_wiener <- readRDS(file = file.path(getwd(), "fits",
                                                 "fit_parrec_wiener.RDS"))
@@ -903,22 +958,45 @@ stanvars_rw <- stanvars +
 
 ## Estimation (i.e., Sampling) {#rewrld-samp}
 
-We need to define the modelling formula and set the priors.
+We need to define the modelling formula and set the priors. We also set the contrast to orthonormal (which is why the `bayestestR` package is loaded) and define a function to randomly generate initial values for the sampling.
 
 ```{r rw-prep}
-formula <- brmsformula(rt | dec(response2) ~ 0 + condition:frequency + 
-                            (0 + condition:frequency|p|id), 
-                       bs ~ 0 + condition + (0 + condition|p|id), 
-                       ndt ~ 0 + condition + (0 + condition|p|id),
-                       bias ~ 0 + condition + (0 + condition|p|id))
+options(contrasts = c('contr.orthonorm', 'contr.poly'))
+
+formula <- brmsformula(rt ~ condition*frequency,
+                       a ~ 0 + Intercept + condition,
+                       ndt ~ 0 + Intercept + condition,
+                       w ~ 0 + Intercept + condition,
+                       sv ~ 1,
+                       center = FALSE
+                       )
 
 priors <- c(
-  set_prior("normal(0, 2.5)", class = "b"), # for mu (which is v)
-  set_prior("logistic(0.75, 0.5)", class = "b", dpar = "a"),
-  set_prior("logistic(-1, 0.5)", class = "b", dpar = "ndt"),
-  set_prior("logistic(0, 0.67)", class = "b", dpar = "w"),
-  set_prior("logistic(-0.5, 0.5)", class = "sd", dpar = "sv")
+  set_prior("student_t(3, 0, 2.5)", class = "b", coef = "Intercept"), # for mu (which is v)
+  set_prior("logistic(0.75, 0.5)", coef = "Intercept", dpar = "a"),
+  set_prior("logistic(-1, 0.5)", coef = "Intercept", dpar = "ndt"),
+  set_prior("logistic(0, 0.67)", coef = "Intercept", dpar = "w"),
+  set_prior("logistic(-0.5, 0.5)", class = "Intercept", dpar = "sv"),
+  set_prior("student_t(4, 0, 0.5)", class = "b"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "a"),
+  set_prior("student_t(4, 0, 0.1)", class = "b", dpar = "ndt"),
+  set_prior("student_t(4, 0, 0.5)", class = "b", dpar = "w")
 )
+
+tmp_dat <- make_standata(formula,
+                         family = ddm,
+                         data = speed_acc,
+                         prior = priors)
+
+init_fun <- function() {
+  list(
+    b = rnorm(tmp_dat$K, 0, 0.25),
+    b_a = c(rnorm(1, log(1), 0.1), rnorm(tmp_dat$K_a-1, 0, 0.1)),
+    b_ndt = c(runif(1, log(0.1), log(0.2)), rnorm(tmp_dat$K_ndt-1, 0, 0.01)),
+    b_w = c(runif(1, logit_scaled(0.4), logit_scaled(0.6)), rnorm(tmp_dat$K_w-1, 0, 0.01)),
+    Intercept_sv = rnorm(1, log(0.1), 0.01)
+  )
+}
 ```
 
 Now we run the sampling.
@@ -929,11 +1007,11 @@ fit_rwdata_5par <- brm(formula,
                        prior = priors,
                        stanvars = stanvars_rw,
                        data = speed_acc,
-                       chains = 1,
-                       iter = 500,#2000
-                       warmup = 250,#1000
+                       chains = 4,
+                       iter = 1000,
+                       warmup = 500,
                        thin = 1,
-                       cores = getOption("mc.cores", 1),
+                       cores = 4,
                        control = list(
                          max_treedepth = 10,
                          adapt_delta = 0.8
@@ -941,21 +1019,21 @@ fit_rwdata_5par <- brm(formula,
 )
 ```
 
-```{r rw-check-if-already-fit5, eval=TRUE, include=FALSE}
-if (file.exists(file.path(getwd(), "fits", "fit_parrec_wiener.RDS"))) {
+```{r rw-check-if-already-fit5, include=FALSE}
+if (file.exists(file.path(getwd(), "fits", "fit-rwdata-5par_prior-on-intercepts-and-bs_2-chains.RDS"))) {
   fit_rwdata_5par <- readRDS(file = file.path(getwd(), "fits",
-                                              "fit_rwdata_5par.RDS"))
+                                              "fit-rwdata-5par_prior-on-intercepts-and-bs_2-chains.RDS"))
 } else { # run fit
   fit_rwdata_5par <- brm(formula,
                          family = ddm,
                          prior = priors,
                          stanvars = stanvars_rw,
                          data = speed_acc,
-                         chains = 1,
-                         iter = 500,#2000
-                         warmup = 250,#1000
+                         chains = 4,
+                         iter = 1000,
+                         warmup = 500,
                          thin = 1,
-                         cores = getOption("mc.cores", 1),
+                         cores = 4,
                          control = list(
                            max_treedepth = 10,
                            adapt_delta = 0.8
@@ -983,7 +1061,7 @@ loo(fit_rwdata_5par)
 
 Posterior predictive check
 
-```{r rw-pp}
+```{r rw-pp, eval = FALSE}
 pp_check(fit_rwdata_5par)
 ```
 

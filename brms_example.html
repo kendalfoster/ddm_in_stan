@@ -12,11 +12,10 @@
 
 <meta name="author" content="Kendal Foster and Henrik Singmann" />
 
-<meta name="date" content="2021-11-11" />
+<meta name="date" content="2021-11-19" />
 
 <title>5-Parameter DDM in brms (Stan)</title>
 
-<script src="data:application/javascript;base64,Ly8gUGFuZG9jIDIuOSBhZGRzIGF0dHJpYnV0ZXMgb24gYm90aCBoZWFkZXIgYW5kIGRpdi4gV2UgcmVtb3ZlIHRoZSBmb3JtZXIgKHRvCi8vIGJlIGNvbXBhdGlibGUgd2l0aCB0aGUgYmVoYXZpb3Igb2YgUGFuZG9jIDwgMi44KS4KZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsIGZ1bmN0aW9uKGUpIHsKICB2YXIgaHMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCJkaXYuc2VjdGlvbltjbGFzcyo9J2xldmVsJ10gPiA6Zmlyc3QtY2hpbGQiKTsKICB2YXIgaSwgaCwgYTsKICBmb3IgKGkgPSAwOyBpIDwgaHMubGVuZ3RoOyBpKyspIHsKICAgIGggPSBoc1tpXTsKICAgIGlmICghL15oWzEtNl0kL2kudGVzdChoLnRhZ05hbWUpKSBjb250aW51ZTsgIC8vIGl0IHNob3VsZCBiZSBhIGhlYWRlciBoMS1oNgogICAgYSA9IGguYXR0cmlidXRlczsKICAgIHdoaWxlIChhLmxlbmd0aCA+IDApIGgucmVtb3ZlQXR0cmlidXRlKGFbMF0ubmFtZSk7CiAgfQp9KTsK"></script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -37,28 +36,26 @@
   }
 </style>
 <style type="text/css" data-origin="pandoc">
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode { white-space: pre; position: relative; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
 }
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
+    border: none; pointer-events: all; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -67,9 +64,9 @@ pre.numberSource code > span > a:first-child::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {   }
+  {  }
 @media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+a.sourceLine::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -127,7 +124,233 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<link rel="stylesheet" href="data:text/css,%0Abody%20%7B%0Abackground%2Dcolor%3A%20%23ffffff%3B%0Amax%2Dwidth%3A%20800px%3B%0Amargin%2Dleft%3A%20auto%3B%0Amargin%2Dright%3A%20auto%3B%0Amargin%2Dtop%3A%200px%3B%0Amargin%2Dbottom%3A%200px%3B%0Apadding%2Dleft%3A%205%25%3B%0Apadding%2Dright%3A%204%25%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%2030px%3B%0Aoverflow%3A%20visible%3B%0Afont%2Dfamily%3A%20Verdana%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Amax%2Dwidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%20%2E25em%3B%0Amargin%2Dbottom%3A%20%2E25em%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0Amargin%2Dtop%3A%200px%3B%0Amargin%2Dbottom%3A%206px%3B%0A%7D%0A%23TOC%20li%20%7B%0Alist%2Dstyle%3A%20disk%20outside%3B%0Aline%2Dheight%3A%201%2E4%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20li%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0Aline%2Dheight%3A%201%2E2%3B%0Amargin%2Dbottom%3A%200px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ap%2Emethod%20%7B%0Abackground%2Dcolor%3A%20%23fcfcfc%3B%0Amargin%2Dleft%3A%202em%3B%0Amargin%2Dright%3A%202em%3B%0Aborder%2Dstyle%3A%20double%3B%0Aborder%2Dwidth%3A%204px%3B%0Aborder%2Dcolor%3A%20%23b3fffa%3B%0Aborder%2Dradius%3A%205px%3B%0Apadding%3A%200%2E25em%200%2E75em%200%2E25em%201em%3B%0A%7D%0Aspan%2Emath%20%7B%0Afont%2Dsize%3A%201em%3B%0A%7D%0Aspan%2Eeqref%7B%0Afont%2Dsize%3A%200%2E75em%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Ahr%2Esec1%20%7B%0Amargin%2Dtop%3A%20%2D1%2E5em%3B%0Aborder%2Dwidth%3A%202px%3B%0Aborder%2Dcolor%3A%20%23aaaaaa%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20disk%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Aul%20ul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f0f0f0%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2095%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Eindent2%20%7B%0Amargin%2Dleft%3A%202%25%3B%0A%7D%0Adiv%2Eindent3%20%7B%0Amargin%2Dleft%3A%203%25%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Apadding%2Dtop%3A%2015px%3B%0Afont%2Dsize%3A%20175%25%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23dbdbdb%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23e8e8e8%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" type="text/css" />
+<style type="text/css">
+body {
+background-color: #ffffff;
+max-width: 800px;
+margin-left: auto;
+margin-right: auto;
+margin-top: 0px;
+margin-bottom: 0px;
+padding-left: 5%;
+padding-right: 4%;
+padding-top: 10px;
+padding-bottom: 30px;
+overflow: visible;
+font-family: Verdana;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+max-width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: .25em;
+margin-bottom: .25em;
+}
+#TOC ul ul {
+margin-left: -2em;
+margin-top: 0px;
+margin-bottom: 6px;
+}
+#TOC li {
+list-style: disk outside;
+line-height: 1.4;
+margin-bottom: 5px;
+}
+#TOC li li {
+list-style: circle outside;
+line-height: 1.2;
+margin-bottom: 0px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+p.method {
+background-color: #fcfcfc;
+margin-left: 2em;
+margin-right: 2em;
+border-style: double;
+border-width: 4px;
+border-color: #b3fffa;
+border-radius: 5px;
+padding: 0.25em 0.75em 0.25em 1em;
+}
+span.math {
+font-size: 1em;
+}
+span.eqref{
+font-size: 0.75em;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+hr.sec1 {
+margin-top: -1.5em;
+border-width: 2px;
+border-color: #aaaaaa;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: disk outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+ul ul li {
+list-style: circle outside;
+}
+pre, code {
+background-color: #f0f0f0;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 95%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.indent2 {
+margin-left: 2%;
+}
+div.indent3 {
+margin-left: 3%;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+padding-top: 15px;
+font-size: 175%;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #dbdbdb;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #e8e8e8;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
 
 
 
@@ -141,10 +364,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <h1 class="title toc-ignore">5-Parameter DDM in <code>brms</code> (<code>Stan</code>)</h1>
 <h4 class="author">Kendal Foster and Henrik Singmann</h4>
-<h4 class="date">November 11, 2021</h4>
+<h4 class="date">November 19, 2021</h4>
 
 
 
+<pre><code>## Required package(s) for this vignette are not available/installed and code will not be executed.</code></pre>
 <div id="TOC">
 <ul>
 <li>
@@ -152,15 +376,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
 <li>
 <a href="#cusfam">Custom <code>brms</code> Family: <code>ddm</code></a>
+<ul>
+<li>
+<a href="#cusfam-5par">Custom 5-Parameter DDM Definition</a>
+</li>
+<li>
+<a href="#cusfam-4par">Custom 4-Parameter DDM Definition</a>
+</li>
+<li>
+<a href="#cusfam-priors">Priors for the Custom Families</a>
+</li>
+</ul>
 </li>
 <li>
 <a href="#parrec">Parameter Recovery</a>
 <ul>
 <li>
-<a href="#parrec-gendata">Generating Some Data for the Parameter Recovery</a>
+<a href="#parrec-data">Generating Some Data for the Parameter Recovery</a>
 </li>
 <li>
-<a href="#parrec-est">Estimation (i.e., Sampling)</a>
+<a href="#parrec-samp">Estimation (i.e., Sampling)</a>
 </li>
 <li>
 <a href="#parrec-post">Posterior Predictive Analysis</a>
@@ -168,16 +403,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul>
 </li>
 <li>
-<a href="#realworld">Fitting Real-World Data</a>
+<a href="#rewrld">Fitting Real-World Data</a>
 <ul>
 <li>
-<a href="#realworld-loaddata">Load Real-World Data</a>
+<a href="#rewrld-data">Load Real-World Data</a>
 </li>
 <li>
-<a href="#realworld-est">Estimation (i.e., Sampling)</a>
+<a href="#rewrld-samp">Estimation (i.e., Sampling)</a>
 </li>
 <li>
-<a href="#realworld-post">Posterior Predictive Analysis</a>
+<a href="#rewrld-post">Posterior Predictive Analysis</a>
 </li>
 </ul>
 </li>
@@ -186,298 +421,756 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
 </ul>
 </div>
-<p>This document illustrates how to use the 5-parameter Diffusion Decision Model (DDM) (cite) with <code>brms</code> (and <code>Stan</code>) (cite these two packages).</p>
-<p>This implementation of the DDM has the following parameters: <span class="math inline">\(a \in (0, \infty)\)</span> (threshold separation), <span class="math inline">\(v \in (-\infty, \infty)\)</span> (drift rate), <span class="math inline">\(t_0 \in [0, \infty)\)</span> (non-decision time/response time constant), <span class="math inline">\(w \in (0, 1)\)</span> (relative starting point), and <span class="math inline">\(sv \in (0, \infty)\)</span> (inter-trial-variability of drift). <br><br></p>
+<p>This document illustrates how to use the 5-parameter Diffusion Decision Model (DDM) (<span class="citation">Ratcliff (1978)</span>) with <code>brms</code> (<span class="citation">P. Bürkner (2017)</span>, <span class="citation">P.-C. Bürkner (2017)</span>) and <code>rstan</code> (<span class="citation">Stan Development Team (2020)</span>).</p>
+<p>This implementation of the DDM has the following 5 parameters: <span class="math inline">\(a \in (0, \infty)\)</span> (threshold separation), <span class="math inline">\(v \in (-\infty, \infty)\)</span> (drift rate), <span class="math inline">\(t_0 \in [0, \infty)\)</span> (non-decision time/response time constant), <span class="math inline">\(w \in (0, 1)\)</span> (relative starting point), and <span class="math inline">\(\eta \in (0, \infty)\)</span> (inter-trial-variability of drift). <br><br></p>
 <div id="intro" class="section level1">
 <h1>Introduction</h1>
 <hr class="sec1">
-<p>This section is a brief intro to the DDM and the PDF- in particular how to approximate the PDF. Basically, a summary of the <code>fddm</code> paper. Probably broken down into two subsections or so (large and small time, but nothing too complicated or mathsy).</p>
+<p>The Ratcliff diffusion decision model (DDM) (<span class="citation">Ratcliff (1978)</span>; <span class="citation">Ratcliff and McKoon (2008)</span>) is the most prominent evidence accumulation model for jointly modelling binary decision and associated response times. It assumes noisy information uptake; this noise is characterized by the Wiener process. The DDM is popular because (a) it utilizes a lot of information from the collected data, which in turn allows us to draw conclusions about the underlying cognitive processes that are assumed to underlie the empirical response time distribution (<span class="citation">Voss and Voss (2008)</span>) and (b) it provides a good fit to data across different empirical domains (<span class="citation">Forstmann, Ratcliff, and Wagenmakers (2016)</span>).</p>
+<p>However, this efficient use of information comes at a rather high computational cost. The probability density function (PDF) of the DDM is the density of first-passage times, that is, the time it takes for the Wiener process to first cross a fixed boundary. The computation of the PDF of the first-passage times is computationally expensive because it contains an infinite sum. Of course computers cannot actually evaluate an infinite sum, so several papers have developed approximation methods to this density function (<span class="citation">Voss and Voss (2008)</span>; <span class="citation">Navarro and Fuss (2009)</span>; <span class="citation">Blurton, Kesselmeier, and Gondan (2012)</span>; <span class="citation">Gondan, Blurton, and Kesselmeier (2014)</span>). The different approximation methods provide different truncation rules that guarantee the value of the approximated density function does not differ from its true value by more than a pre-specified error tolerance.</p>
+<p>The analytic formulation of the diffusion model PDF originates from <span class="citation">Feller (1968)</span>, who provides its seminal derivation. In this derivation from first principles (i.e., the Wiener process), there is a step that requires taking a limit. <span class="citation">Feller (1968)</span> provides two different – but equivalent – limiting processes that yield two different – but equal – forms of the density function. Each of these forms contains an infinite sum, and they are known individually as the “large-time” density function and the “small-time” density function (<span class="citation">Navarro and Fuss (2009)</span>). As their names suggest, the “large-time” density function is more efficient at handling large response times, and the “small-time” density function is more efficient at calculating small response times. Even though the two distinct forms of the DDM density function are mathematically equivalent, they can produce slightly different results when calculated numerically with a fixed and limited precision.</p>
+<p>For the remainder of this section, we will refer to the 5-parameter DDM density function as <span class="math inline">\(f(t | v, \eta, a, w)\)</span>. Note that we use <span class="math inline">\(t := t - t_0\)</span> to make the notation cleaner.</p>
+<div id="intro-large" class="section level2">
+<h2>Large-Time Density Function</h2>
+<p>The 5-parameter “large-time” PDF is</p>
+<p><span class="math display">\[\begin{equation} \label{eq:pdf-l}
+f_\ell(t | v, \eta, a, w) = \frac{\pi}{a^2 \sqrt{1 + \eta^2 t}}
+                            \exp{ \left( \frac{\eta^2 a^2 w^2 -2vaw -v^2 t}{2 (1 + \eta^2 t)} \right)}
+                                                        \sum_{j = 1}^{k_\ell} j \sin \left( j w \pi \right) \exp{ \left( -\frac{j^2 \pi^2 t}{2a^2} \right)}
+\end{equation}\]</span></p>
+<p>The first truncation rule for the infinite sum in this density function was provided by <span class="citation">Navarro and Fuss (2009)</span>; it uses the first <span class="math inline">\(k_\ell\)</span> of the infinite sum. It’s still the only one out there.</p>
+</div>
+<div id="intro-small" class="section level2">
+<h2>Small-Time Density Function</h2>
+<p>The 5-parameter “small-time” PDF is</p>
+<p><span class="math display">\[\begin{equation} \label{eq:pdf-s}
+f_s(t | v, \eta, a, w) = \frac{a}{\sqrt{2 \pi t^3 \left( 1 + \eta^2 t \right)}}
+                                                 \exp{ \left( \frac{\eta^2 a^2 w^2 -2vaw -v^2 t}{2 (1 + \eta^2 t)} \right)}
+                                                 \sum_{j = -k_s}^{k_s} (w + 2j) \exp{ \left( -\frac{a^2}{2t} \left( w + 2j \right)^2 \right)}
+\end{equation}\]</span></p>
+<p><span class="citation">Navarro and Fuss (2009)</span> also provided the first truncation rule for the infinite sum in this density function; the truncated sum runs from term <span class="math inline">\(-k_s\)</span> to term <span class="math inline">\(k_s\)</span>, <span class="math inline">\(2k + 1\)</span> terms in total. <span class="citation">Gondan, Blurton, and Kesselmeier (2014)</span> provided another truncation rule for this infinite sum that follows the same premise, using the first <span class="math inline">\(2k + 1\)</span> terms. In their paper, <span class="citation">Gondan, Blurton, and Kesselmeier (2014)</span> mention that the mathematical properties of the sum allow it to potentially be truncated sooner, but then the number of terms required for the truncated sum cannot be pre-calculated.</p>
+</div>
+<div id="intro-combined" class="section level2">
+<h2>Combining the Large-time and Small-time Density Functions</h2>
+<p>Along with their “large-time” and “small-time” truncation rules, <span class="citation">Navarro and Fuss (2009)</span> also propose a mechanism to switch between the “large-time” and “small-time” PDFs so that the more efficient one is used. Given a pre-defined error tolerance, the mechanism calculates the number of terms required for the “large-time” PDF, <span class="math inline">\(k_\ell\)</span>, and the “small-time” PDF, <span class="math inline">\(k_s\)</span>; then it uses whichever PDF requires fewer terms. Even though <span class="citation">Gondan, Blurton, and Kesselmeier (2014)</span> mentioned exploiting the mathematical properties of the infinite sum in the “small-time” PDF to speed up the approximation, they favored pre-calculating <span class="math inline">\(k_s\)</span> so that the same mechanism could directly compare the efficiency of the “large-time” and “small-time” PDFs.</p>
+<p>Instead of precalculating <span class="math inline">\(k_s\)</span>, we proposed using a heuristic to represent <span class="math inline">\(k_s\)</span>; this way we could save computation time from not calculating <span class="math inline">\(k_s\)</span> and we could still see how efficient the “large-time” PDF could be. Our mechanism for choosing between the “large-time” and “small-time” PDF treats <span class="math inline">\(k_s = 2\)</span>, so that if <span class="math inline">\(k_\ell\)</span> is calculated to be <span class="math inline">\(0\)</span> or <span class="math inline">\(1\)</span>, then the “large-time” PDF is used; otherwise if <span class="math inline">\(k_\ell &gt; 1\)</span>, then the “small-time” PDF is used. We determined the heuristic value <span class="math inline">\(1\)</span> from empirical testing; the results of this testing can be seen in our arXiv paper (<span class="citation">Foster and Singmann (2021)</span>). Formulaically, it looks like</p>
+<p><span class="math display">\[\begin{equation} \label{eq:pdf-c}
+  f(t | v, \eta, a, w) = \begin{cases}
+                           f_\ell(t | v, \eta, a, w) &amp; \text{ if } k_\ell \le 1\\
+                           f_s(t | v, \eta, a, w) &amp; \text{ if } k_\ell &gt; 1
+                         \end{cases}
+\end{equation}\]</span></p>
+<p>For a pre-defined error tolerance, this method of combining the “large-time” and “small-time” is not only the fastest in terms of computation time, but it is also the most stable algorithm to use in optimization routines (e.g., fitting the model to data). You can see these results in our arXiv paper (<span class="citation">Foster and Singmann (2021)</span>). This method is the default in our <code>fddm</code> package and is the basis of the <code>ddm_lpdf()</code> function that we define in the <code>Stan</code> “functions” block (loaded into <code>rstan</code> via <code>brms</code> through the object <code>stan_funs</code> defined <a href="#stan-func-def">below</a>).</p>
+</div>
 </div>
 <div id="cusfam" class="section level1">
 <h1>Custom <code>brms</code> Family: <code>ddm</code></h1>
 <hr class="sec1">
+<p>As <code>rstan</code> is a great tool for performing Bayesian analysis, we thought that it should have access to the 5-parameter DDM. Moreover, the popular <code>R</code> package <code>brms</code> is a widely used interface to <code>rstan</code> that natively handles many popular distributions, but it too is missing the 5-parameter DDM. This section will detail how to define the 5-parameter DDM for use in <code>brms</code> (and also <code>rstan</code>).</p>
 <p>Let’s begin by loading the packages that we’ll use.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;brms&quot;</span>)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loading required package: Rcpp</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loading &#39;brms&#39; package (version 2.16.1). Useful instructions</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; can be found by typing help(&#39;brms&#39;). A more detailed introduction</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; to the package is available through vignette(&#39;brms_overview&#39;).</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;brms&#39;</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:stats&#39;:</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     ar</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;rtdists&quot;</span>)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;fddm&quot;</span>)</span></code></pre></div>
-<p>The package <code>brms</code> contains many distributions, including the Wiener distribution. However, <code>brms</code> only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, <span class="math inline">\(sv\)</span>). To use the 5-parameter DDM with <code>brms</code>, we must define a “custom family” that contains all of the necessary information about the distribution to pass to <code>Stan</code>. Note that we have changed the parameter <span class="math inline">\(v\)</span> to <span class="math inline">\(mu\)</span> because <code>brms</code> demands that there be a parameter called “mu” in the family. We also changed the parameter <code>t0</code> to <code>ndt</code> because <code>brms</code> does not allow a parameter to end in a number. Each parameter in the family must have a mapping, defined in the <code>links</code> argument (in the order defined in <code>dpars</code> in the line above). <code>lb</code> and <code>ub</code> are vectors of the lower and upper bounds of the parameters (in the order defined in <code>dpars</code> two lines above), respectively. The argument <code>type</code> is the type of data that the distribution handles; in our case, the DDM handles <code>real</code> numbers (or <code>double</code>s in other programming languages) as opposed to integers (<code>int</code>s). The last argument, <code>vars</code>, allows us to include other data that are relative to the distribution; as the data are actually tuples of responses and associated response times, this arguments allows us to input a vector of responses as the <code>resp</code> variable.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ddm <span class="ot">&lt;-</span> <span class="fu">custom_family</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ddm&quot;</span>, <span class="at">dpars =</span> <span class="fu">c</span>(<span class="st">&quot;mu&quot;</span>, <span class="st">&quot;a&quot;</span>, <span class="st">&quot;ndt&quot;</span>, <span class="st">&quot;w&quot;</span>, <span class="st">&quot;sv&quot;</span>),</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">links =</span> <span class="fu">c</span>(<span class="st">&quot;identity&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;logit&quot;</span>, <span class="st">&quot;log&quot;</span>), </span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lb =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="at">ub =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="cn">NA</span>, <span class="cn">NA</span>, <span class="dv">1</span>, <span class="cn">NA</span>),</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;real&quot;</span>, <span class="at">vars =</span> <span class="st">&quot;resp[n]&quot;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">library</span>(<span class="st">&quot;brms&quot;</span>)</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw">library</span>(<span class="st">&quot;rtdists&quot;</span>)</a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="kw">library</span>(<span class="st">&quot;fddm&quot;</span>)</a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="kw">library</span>(<span class="st">&quot;RWiener&quot;</span>)</a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="kw">library</span>(<span class="st">&quot;bayestestR&quot;</span>)</a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="kw">library</span>(<span class="st">&quot;ggplot2&quot;</span>)</a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="kw">library</span>(<span class="st">&quot;cowplot&quot;</span>)</a></code></pre></div>
+<p>The package <code>brms</code> contains many distributions, including the Wiener distribution, which is equivalent to the DDM; however, <code>brms</code> only natively supports the 4-parameter Wiener distribution (it excludes the inter-trial variability in the drift rate, <span class="math inline">\(sv\)</span>). To use the 5-parameter DDM with <code>brms</code>, we must define a “custom family” that contains all of the necessary information about the distribution to pass to <code>Stan</code>. We will compare the custom 5-parameter variant with the 4-parameter variant that is native in <code>brms</code>. In addition, we will also define a custom family for the 4-parameter variant using the same algorithm from the 5-parameter variant; we will compare this variant to the native 4-parameter variant as well as our other custom family for the 5-parameter variant. After defining the custom family for the 5-parameter variant, we will define the custom family for the 4-parameter variant (the process will be nearly identical).</p>
+<div id="cusfam-5par" class="section level2">
+<h2>Custom 5-Parameter DDM Definition</h2>
+<p>First, we define the custom family “ddm” for the 5-parameter variant.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">ddm &lt;-<span class="st"> </span><span class="kw">custom_family</span>(</a>
+<a class="sourceLine" id="cb3-2" title="2">  <span class="st">&quot;ddm&quot;</span>, <span class="dt">dpars =</span> <span class="kw">c</span>(<span class="st">&quot;mu&quot;</span>, <span class="st">&quot;a&quot;</span>, <span class="st">&quot;ndt&quot;</span>, <span class="st">&quot;w&quot;</span>, <span class="st">&quot;sv&quot;</span>),</a>
+<a class="sourceLine" id="cb3-3" title="3">  <span class="dt">links =</span> <span class="kw">c</span>(<span class="st">&quot;identity&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;logit&quot;</span>, <span class="st">&quot;log&quot;</span>), </a>
+<a class="sourceLine" id="cb3-4" title="4">  <span class="dt">lb =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">ub =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="ot">NA</span>, <span class="ot">NA</span>, <span class="dv">1</span>, <span class="ot">NA</span>),</a>
+<a class="sourceLine" id="cb3-5" title="5">  <span class="dt">type =</span> <span class="st">&quot;real&quot;</span>, <span class="dt">vars =</span> <span class="st">&quot;resp[n]&quot;</span></a>
+<a class="sourceLine" id="cb3-6" title="6">)</a></code></pre></div>
+<p>Note that we have changed the parameter <span class="math inline">\(v\)</span> to <span class="math inline">\(mu\)</span> because <code>brms</code> demands that there be a parameter called “mu” in the family. We also changed the parameter <code>t0</code> to <code>ndt</code> because <code>brms</code> does not allow a parameter to end in a number. In addition, we changed the parameter <span class="math inline">\(\eta\)</span> to <code>sv</code> because that is how it is written in our software package. Each parameter in the family must have a mapping, defined in the <code>links</code> argument (in the order defined in <code>dpars</code> in the line above). <code>lb</code> and <code>ub</code> are vectors of the lower and upper bounds of the parameters (in the order defined in <code>dpars</code> two lines above), respectively. The argument <code>type</code> is the type of data that the distribution handles; in our case, the DDM handles <code>real</code> numbers (or <code>double</code>s in other programming languages) as opposed to integers (<code>int</code>s). The last argument, <code>vars</code>, allows us to include other data that are relative to the distribution; as the data are actually tuples of responses and associated response times, this arguments allows us to input a vector of responses as the <code>resp</code> variable.</p>
 <p>We must also provide the probability density function for the underlying <code>Stan</code> sampler to use. This function is written in the <code>Stan</code> language, and we will input it to <code>brms</code> later. Note that this function accepts only single real values for each of the inputs (aside from <code>resp</code>, which is of the <code>int</code> type). For a version of this density function that provides support for vectors of response times (<code>rt</code>) and responses (<code>resp</code>), see the file <code>extra_stan_stuff/brms_ddm_stan_funcs.stan</code>.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>stan_funs <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">real ddm_lpdf(real rt, real v, real a, real ndt, real w, real sv, int resp)</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">{</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">  // initialize output</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">  real logp = 0.0;</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">  // check parameter values</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">  if (a &lt;= 0 || is_inf(a) || is_nan(a)) return negative_infinity();</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">  if (is_inf(v) || is_nan(v)) return negative_infinity();</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">  if (ndt &lt; 0 || is_inf(ndt) || is_nan(ndt)) return negative_infinity();</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="st">  if (w &lt;= 0 || w &gt;= 1 || is_nan(w)) return negative_infinity();</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">  if (sv &lt; 0 || is_inf(sv) || is_nan(sv)) return negative_infinity();</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">  // adjust parameters</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">  {</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">  real t = rt - ndt;</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">  real a_i = a;</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">  real sv_i = sv;</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">  real v_i = (resp == 1) ? v : -v;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="st">  real w_i = (resp == 1) ? w : 1 - w;</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="st">  real taa = t / (a_i * a_i);</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="st">  // define variables for use later (have to do it early because of Stan)</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="st">  // constants</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="st">  real log_2_pi_2 = 0.5 * log(2 * pi());</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="st">  real sv_thresh = 0.0;</span></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="st">  // used in both large-time and small-time</span></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="st">  real mult = 0.0;</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="st">  real exp_err = 0.0;</span></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="st">  real gamma = -0.5 * pi() * pi() * taa;</span></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="st">  real summ = 0.0;</span></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="st">  int max_int = 1000;</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="st">  // used only in large-time</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="st">  int kl = 0;</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="st">  real k_dbl = 0.0;</span></span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="st">  real bc = 1 / (pi() * sqrt(taa));</span></span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="st">  // used only in small-time</span></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="st">  real minterms = 0.5 * sqrt(taa) - 0.5 * w_i; // min number of terms, truncates toward 0</span></span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="st">  real term = 0.0;</span></span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="st">  real rj = 0.0;</span></span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="st">  int js = 0;</span></span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="st">  // check large-time number of terms</span></span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="st">  if (sv_i &lt; sv_thresh) {</span></span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="st">    mult = - v_i * a_i * w_i - 0.5 * v_i*v_i * t - 2 * log(a_i);</span></span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="st">  } else {</span></span>
-<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="st">    mult = (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i - v_i*v_i * t)</span></span>
-<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="st">    / (2 + 2 * sv_i*sv_i * t) - 0.5 * log(1 + sv_i*sv_i * t) - 2 * log(a_i);</span></span>
-<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="st">  exp_err = 0.000001 * exp(-mult);</span></span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="st">  if (bc &gt; max_int) { // boundary condition</span></span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a><span class="st">    k_dbl = max_int;</span></span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="st">  } else {</span></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="st">    if (exp_err * pi() * taa &lt; 1) { // error threshold is low enough</span></span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="st">      k_dbl = sqrt(-2 * log(pi() * taa * exp_err) / (pi() * pi() * taa));</span></span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="st">      if (k_dbl &gt; max_int) {</span></span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="st">        k_dbl = max_int;</span></span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="st">      } else {</span></span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="st">        k_dbl = fmax(k_dbl, bc);</span></span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="st">      }</span></span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="st">    } else { // threshold not low enough, so set to boundary condition</span></span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="st">      k_dbl = bc;</span></span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="st">  while (kl &lt; k_dbl) kl += 1;</span></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="st">  // compare large-time and small-time</span></span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="st">  if (kl &lt;= 1) { // do large-time</span></span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="st">    for(jl in 1:kl) {</span></span>
-<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="st">      summ += jl * sin(jl * w_i * pi()) * exp(gamma * jl * jl);</span></span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="st">    logp += log(pi());</span></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="st">  } else { // do small-time</span></span>
-<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="st">    if (sv_i &lt; sv_thresh) {</span></span>
-<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="st">      mult = log(a_i) - log_2_pi_2 - 1.5 * log(t) - v_i * a_i * w_i</span></span>
-<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="st">      - 0.5 * v_i*v_i * t;</span></span>
-<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="st">    } else {</span></span>
-<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a><span class="st">      mult = log(a_i) - 1.5 * log(t) - log_2_pi_2</span></span>
-<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a><span class="st">      - 0.5 * log(1 + sv_i*sv_i * t)</span></span>
-<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a><span class="st">      + (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i</span></span>
-<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a><span class="st">      - v_i*v_i * t) / (2 + 2 * sv_i*sv_i * t);</span></span>
-<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a><span class="st">    exp_err = 0.000001 * exp(-mult);</span></span>
-<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a><span class="st">    gamma = -1 / (2 * taa);</span></span>
-<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a><span class="st">    summ = w_i * exp(gamma * w_i*w_i); // initialize with j=0 term</span></span>
-<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a><span class="st">    while (js &lt; minterms) {</span></span>
-<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a><span class="st">      js += 1;</span></span>
-<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a><span class="st">      rj = 2 * js - w_i;</span></span>
-<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a><span class="st">      summ -= rj * exp(gamma * rj*rj);</span></span>
-<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="st">      rj = 2 * js + w_i;</span></span>
-<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a><span class="st">      summ += rj * exp(gamma * rj*rj);</span></span>
-<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="st">    js += 1;</span></span>
-<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a><span class="st">    rj = 2 * js - w_i;</span></span>
-<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a><span class="st">    term = rj * exp(gamma * rj*rj);</span></span>
-<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="st">    summ -= term;</span></span>
-<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a><span class="st">    while (term &gt; exp_err) {</span></span>
-<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a><span class="st">      rj = 2 * js + w_i;</span></span>
-<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="st">      term = rj * exp(gamma * rj*rj);</span></span>
-<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a><span class="st">      summ += term;</span></span>
-<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a><span class="st">      if (term &lt;= exp_err) break;</span></span>
-<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="st">      js += 1;</span></span>
-<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a><span class="st">      rj = 2 * js - w_i;</span></span>
-<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="st">      term = rj * exp(gamma * rj*rj);</span></span>
-<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a><span class="st">      summ -= term;</span></span>
-<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a><span class="st">    </span></span>
-<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="st">    // check summ and chuck everything in logp</span></span>
-<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a><span class="st">    if (summ &gt;= 0) {  // if result is negative, don&#39;t add to logp</span></span>
-<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a><span class="st">      logp += mult + log(summ);</span></span>
-<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
-<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
-<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
-<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
-<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a><span class="st">  return logp;</span></span>
-<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a><span class="st">}</span></span>
-<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span></span></code></pre></div>
+<p><a id="stan-func-def"></a></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">stan_funs &lt;-<span class="st"> &quot;</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">real ddm_lpdf(real rt, real v, real a, real ndt, real w, real sv, int resp)</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">{</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  // initialize output</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  real logp = 0.0;</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="st">  // check parameter values</span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="st">  if (a &lt;= 0 || is_inf(a) || is_nan(a)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb4-9" title="9"><span class="st">  if (is_inf(v) || is_nan(v)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb4-10" title="10"><span class="st">  if (ndt &lt; 0 || is_inf(ndt) || is_nan(ndt)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb4-11" title="11"><span class="st">  if (w &lt;= 0 || w &gt;= 1 || is_nan(w)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb4-12" title="12"><span class="st">  if (sv &lt; 0 || is_inf(sv) || is_nan(sv)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb4-13" title="13"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-14" title="14"><span class="st">  // adjust parameters</span></a>
+<a class="sourceLine" id="cb4-15" title="15"><span class="st">  {</span></a>
+<a class="sourceLine" id="cb4-16" title="16"><span class="st">  real t = rt - ndt;</span></a>
+<a class="sourceLine" id="cb4-17" title="17"><span class="st">  real a_i = a;</span></a>
+<a class="sourceLine" id="cb4-18" title="18"><span class="st">  real sv_i = sv;</span></a>
+<a class="sourceLine" id="cb4-19" title="19"><span class="st">  real v_i = (resp == 1) ? v : -v;</span></a>
+<a class="sourceLine" id="cb4-20" title="20"><span class="st">  real w_i = (resp == 1) ? w : 1 - w;</span></a>
+<a class="sourceLine" id="cb4-21" title="21"><span class="st">  real taa = t / (a_i * a_i);</span></a>
+<a class="sourceLine" id="cb4-22" title="22"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-23" title="23"><span class="st">  // define variables for use later (have to do it early because of Stan)</span></a>
+<a class="sourceLine" id="cb4-24" title="24"><span class="st">  // constants</span></a>
+<a class="sourceLine" id="cb4-25" title="25"><span class="st">  real log_2_pi_2 = 0.5 * log(2 * pi());</span></a>
+<a class="sourceLine" id="cb4-26" title="26"><span class="st">  real sv_thresh = 0.0;</span></a>
+<a class="sourceLine" id="cb4-27" title="27"><span class="st">  // used in both large-time and small-time</span></a>
+<a class="sourceLine" id="cb4-28" title="28"><span class="st">  real mult = 0.0;</span></a>
+<a class="sourceLine" id="cb4-29" title="29"><span class="st">  real exp_err = 0.0;</span></a>
+<a class="sourceLine" id="cb4-30" title="30"><span class="st">  real gamma = -0.5 * pi() * pi() * taa;</span></a>
+<a class="sourceLine" id="cb4-31" title="31"><span class="st">  real summ = 0.0;</span></a>
+<a class="sourceLine" id="cb4-32" title="32"><span class="st">  int max_int = 1000;</span></a>
+<a class="sourceLine" id="cb4-33" title="33"><span class="st">  // used only in large-time</span></a>
+<a class="sourceLine" id="cb4-34" title="34"><span class="st">  int kl = 0;</span></a>
+<a class="sourceLine" id="cb4-35" title="35"><span class="st">  real k_dbl = 0.0;</span></a>
+<a class="sourceLine" id="cb4-36" title="36"><span class="st">  real bc = 1 / (pi() * sqrt(taa));</span></a>
+<a class="sourceLine" id="cb4-37" title="37"><span class="st">  // used only in small-time</span></a>
+<a class="sourceLine" id="cb4-38" title="38"><span class="st">  real minterms = 0.5 * sqrt(taa) - 0.5 * w_i; // min number of terms, truncates toward 0</span></a>
+<a class="sourceLine" id="cb4-39" title="39"><span class="st">  real term = 0.0;</span></a>
+<a class="sourceLine" id="cb4-40" title="40"><span class="st">  real rj = 0.0;</span></a>
+<a class="sourceLine" id="cb4-41" title="41"><span class="st">  int js = 0;</span></a>
+<a class="sourceLine" id="cb4-42" title="42"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-43" title="43"><span class="st">  // check large-time number of terms</span></a>
+<a class="sourceLine" id="cb4-44" title="44"><span class="st">  if (sv_i &lt; sv_thresh) {</span></a>
+<a class="sourceLine" id="cb4-45" title="45"><span class="st">    mult = - v_i * a_i * w_i - 0.5 * v_i*v_i * t - 2 * log(a_i);</span></a>
+<a class="sourceLine" id="cb4-46" title="46"><span class="st">  } else {</span></a>
+<a class="sourceLine" id="cb4-47" title="47"><span class="st">    mult = (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i - v_i*v_i * t)</span></a>
+<a class="sourceLine" id="cb4-48" title="48"><span class="st">    / (2 + 2 * sv_i*sv_i * t) - 0.5 * log(1 + sv_i*sv_i * t) - 2 * log(a_i);</span></a>
+<a class="sourceLine" id="cb4-49" title="49"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb4-50" title="50"><span class="st">  exp_err = 0.000001 * exp(-mult);</span></a>
+<a class="sourceLine" id="cb4-51" title="51"><span class="st">  if (bc &gt; max_int) { // boundary condition</span></a>
+<a class="sourceLine" id="cb4-52" title="52"><span class="st">    k_dbl = max_int;</span></a>
+<a class="sourceLine" id="cb4-53" title="53"><span class="st">  } else {</span></a>
+<a class="sourceLine" id="cb4-54" title="54"><span class="st">    if (exp_err * pi() * taa &lt; 1) { // error threshold is low enough</span></a>
+<a class="sourceLine" id="cb4-55" title="55"><span class="st">      k_dbl = sqrt(-2 * log(pi() * taa * exp_err) / (pi() * pi() * taa));</span></a>
+<a class="sourceLine" id="cb4-56" title="56"><span class="st">      if (k_dbl &gt; max_int) {</span></a>
+<a class="sourceLine" id="cb4-57" title="57"><span class="st">        k_dbl = max_int;</span></a>
+<a class="sourceLine" id="cb4-58" title="58"><span class="st">      } else {</span></a>
+<a class="sourceLine" id="cb4-59" title="59"><span class="st">        k_dbl = fmax(k_dbl, bc);</span></a>
+<a class="sourceLine" id="cb4-60" title="60"><span class="st">      }</span></a>
+<a class="sourceLine" id="cb4-61" title="61"><span class="st">    } else { // threshold not low enough, so set to boundary condition</span></a>
+<a class="sourceLine" id="cb4-62" title="62"><span class="st">      k_dbl = bc;</span></a>
+<a class="sourceLine" id="cb4-63" title="63"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-64" title="64"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb4-65" title="65"><span class="st">  while (kl &lt; k_dbl) kl += 1;</span></a>
+<a class="sourceLine" id="cb4-66" title="66"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-67" title="67"><span class="st">  // compare large-time and small-time</span></a>
+<a class="sourceLine" id="cb4-68" title="68"><span class="st">  if (kl &lt;= 1) { // do large-time</span></a>
+<a class="sourceLine" id="cb4-69" title="69"><span class="st">    for(jl in 1:kl) {</span></a>
+<a class="sourceLine" id="cb4-70" title="70"><span class="st">      summ += jl * sin(jl * w_i * pi()) * exp(gamma * jl * jl);</span></a>
+<a class="sourceLine" id="cb4-71" title="71"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-72" title="72"><span class="st">    logp += log(pi());</span></a>
+<a class="sourceLine" id="cb4-73" title="73"><span class="st">  } else { // do small-time</span></a>
+<a class="sourceLine" id="cb4-74" title="74"><span class="st">    if (sv_i &lt; sv_thresh) {</span></a>
+<a class="sourceLine" id="cb4-75" title="75"><span class="st">      mult = log(a_i) - log_2_pi_2 - 1.5 * log(t) - v_i * a_i * w_i</span></a>
+<a class="sourceLine" id="cb4-76" title="76"><span class="st">      - 0.5 * v_i*v_i * t;</span></a>
+<a class="sourceLine" id="cb4-77" title="77"><span class="st">    } else {</span></a>
+<a class="sourceLine" id="cb4-78" title="78"><span class="st">      mult = log(a_i) - 1.5 * log(t) - log_2_pi_2</span></a>
+<a class="sourceLine" id="cb4-79" title="79"><span class="st">      - 0.5 * log(1 + sv_i*sv_i * t)</span></a>
+<a class="sourceLine" id="cb4-80" title="80"><span class="st">      + (sv_i*sv_i * a_i*a_i * w_i*w_i - 2 * v_i * a_i * w_i</span></a>
+<a class="sourceLine" id="cb4-81" title="81"><span class="st">      - v_i*v_i * t) / (2 + 2 * sv_i*sv_i * t);</span></a>
+<a class="sourceLine" id="cb4-82" title="82"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-83" title="83"><span class="st">    exp_err = 0.000001 * exp(-mult);</span></a>
+<a class="sourceLine" id="cb4-84" title="84"><span class="st">    gamma = -1 / (2 * taa);</span></a>
+<a class="sourceLine" id="cb4-85" title="85"><span class="st">    summ = w_i * exp(gamma * w_i*w_i); // initialize with j=0 term</span></a>
+<a class="sourceLine" id="cb4-86" title="86"><span class="st">    while (js &lt; minterms) {</span></a>
+<a class="sourceLine" id="cb4-87" title="87"><span class="st">      js += 1;</span></a>
+<a class="sourceLine" id="cb4-88" title="88"><span class="st">      rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb4-89" title="89"><span class="st">      summ -= rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb4-90" title="90"><span class="st">      rj = 2 * js + w_i;</span></a>
+<a class="sourceLine" id="cb4-91" title="91"><span class="st">      summ += rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb4-92" title="92"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-93" title="93"><span class="st">    js += 1;</span></a>
+<a class="sourceLine" id="cb4-94" title="94"><span class="st">    rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb4-95" title="95"><span class="st">    term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb4-96" title="96"><span class="st">    summ -= term;</span></a>
+<a class="sourceLine" id="cb4-97" title="97"><span class="st">    while (term &gt; exp_err) {</span></a>
+<a class="sourceLine" id="cb4-98" title="98"><span class="st">      rj = 2 * js + w_i;</span></a>
+<a class="sourceLine" id="cb4-99" title="99"><span class="st">      term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb4-100" title="100"><span class="st">      summ += term;</span></a>
+<a class="sourceLine" id="cb4-101" title="101"><span class="st">      if (term &lt;= exp_err) break;</span></a>
+<a class="sourceLine" id="cb4-102" title="102"><span class="st">      js += 1;</span></a>
+<a class="sourceLine" id="cb4-103" title="103"><span class="st">      rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb4-104" title="104"><span class="st">      term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb4-105" title="105"><span class="st">      summ -= term;</span></a>
+<a class="sourceLine" id="cb4-106" title="106"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-107" title="107"><span class="st">    </span></a>
+<a class="sourceLine" id="cb4-108" title="108"><span class="st">    // check summ and chuck everything in logp</span></a>
+<a class="sourceLine" id="cb4-109" title="109"><span class="st">    if (summ &gt;= 0) {  // if result is negative, don&#39;t add to logp</span></a>
+<a class="sourceLine" id="cb4-110" title="110"><span class="st">      logp += mult + log(summ);</span></a>
+<a class="sourceLine" id="cb4-111" title="111"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb4-112" title="112"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb4-113" title="113"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb4-114" title="114"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-115" title="115"><span class="st">  return logp;</span></a>
+<a class="sourceLine" id="cb4-116" title="116"><span class="st">}</span></a>
+<a class="sourceLine" id="cb4-117" title="117"><span class="st">&quot;</span></a></code></pre></div>
 <p>We’ll save this in the object <code>stanvars</code>, to which we’ll add later.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>stanvars <span class="ot">&lt;-</span> <span class="fu">stanvar</span>(<span class="at">scode =</span> stan_funs, <span class="at">block =</span> <span class="st">&quot;functions&quot;</span>)</span></code></pre></div>
-<p>The last bit of prep work that we need to do in order to run <code>Stan</code> sampling is to define the priors on the model parameters. These priors were chosen to be mildly informative, as we have an idea of the reasonable range of the parameters. Note that the prior for the non-decision time (<code>ndt</code>) technically extends to positive infinity, but in practice the non-decision time is bounded above by the smallest response time in the dataset.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>priors <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_prior</span>(<span class="st">&quot;normal(0, 2.5)&quot;</span>, <span class="at">class =</span> <span class="st">&quot;Intercept&quot;</span>), <span class="co"># for mu (which is v)</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_prior</span>(<span class="st">&quot;gamma(3, 1.5)&quot;</span>, <span class="at">class =</span> <span class="st">&quot;a&quot;</span>),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_prior</span>(<span class="st">&quot;gamma(2, 4)&quot;</span>, <span class="at">class =</span> <span class="st">&quot;ndt&quot;</span>),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_prior</span>(<span class="st">&quot;beta(2, 2)&quot;</span>, <span class="at">class =</span> <span class="st">&quot;w&quot;</span>),</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_prior</span>(<span class="st">&quot;gamma(2, 1)&quot;</span>, <span class="at">class =</span> <span class="st">&quot;sv&quot;</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">stanvars &lt;-<span class="st"> </span><span class="kw">stanvar</span>(<span class="dt">scode =</span> stan_funs, <span class="dt">block =</span> <span class="st">&quot;functions&quot;</span>)</a></code></pre></div>
+<p>The last bit of prep work that we need to do in order to run <code>Stan</code> sampling is to define the priors on the model parameters. These priors were chosen to be mildly informative, as we have an idea of the reasonable range of the parameters. These priors may seem strange in that they support the negative real numbers when the parameters cannot be negative. In the definition of the custom family, we included “link” functions which will transform the parameters and their priors; more details about this can be found <a href="#cusfam-priors">below</a>. Note that the prior for the non-decision time (<code>ndt</code>) technically extends to positive infinity, but in practice the non-decision time is bounded above by the smallest response time in the dataset.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">priors &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
+<a class="sourceLine" id="cb6-2" title="2">  <span class="kw">set_prior</span>(<span class="st">&quot;normal(0, 2.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;Intercept&quot;</span>), <span class="co"># for mu (which is v)</span></a>
+<a class="sourceLine" id="cb6-3" title="3">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0.75, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;a&quot;</span>),</a>
+<a class="sourceLine" id="cb6-4" title="4">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(-1, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;ndt&quot;</span>),</a>
+<a class="sourceLine" id="cb6-5" title="5">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0, 0.67)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;w&quot;</span>),</a>
+<a class="sourceLine" id="cb6-6" title="6">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(-0.5, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;sv&quot;</span>)</a>
+<a class="sourceLine" id="cb6-7" title="7">)</a></code></pre></div>
 <p><a id="brms-pp"></a></p>
 <p>Although we could begin with <code>Stan</code> sampling now, we’ll instead define two functions that will later help us with the posterior analysis.</p>
-<p>First, we define the log-likelihood function (to be used in <code>loo</code>). Note the particular naming scheme used for the function name and the specific arguments the function expects. This log-likelihood function requires the calculation of the 5-parameter DDM probability density function; for this calculation, we use the package <code>fddm</code>.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>log_lik_ddm <span class="ot">&lt;-</span> <span class="cf">function</span>(i, prep) {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  mu <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="at">i =</span> i)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  a <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="at">i =</span> i)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  w <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="at">i =</span> i)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  ndt <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="at">i =</span> i)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  sv <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;sv&quot;</span>, <span class="at">i =</span> i)</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> prep<span class="sc">$</span>data<span class="sc">$</span>Y[i]</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  resp <span class="ot">&lt;-</span> prep<span class="sc">$</span>data<span class="sc">$</span>resp[i]</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  fddm<span class="sc">::</span><span class="fu">dfddm</span>(y, resp<span class="sc">+</span><span class="dv">1</span>, a, mu, ndt, w, sv, <span class="at">log =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>First, we define the log-likelihood function (to be used in <code>loo</code>). Note the particular naming scheme used for the function name and the specific arguments the function expects. This log-likelihood function requires the calculation of the 5-parameter DDM probability density function; for this calculation, we use the package <code>fddm</code> as it contains the most recent implementation of the 5-parameter DDM density function.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">log_lik_ddm &lt;-<span class="st"> </span><span class="cf">function</span>(i, prep) {</a>
+<a class="sourceLine" id="cb7-2" title="2">  mu &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb7-3" title="3">  a &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb7-4" title="4">  w &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb7-5" title="5">  ndt &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb7-6" title="6">  sv &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;sv&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb7-7" title="7">  y &lt;-<span class="st"> </span>prep<span class="op">$</span>data<span class="op">$</span>Y[i]</a>
+<a class="sourceLine" id="cb7-8" title="8">  resp &lt;-<span class="st"> </span>prep<span class="op">$</span>data<span class="op">$</span>resp[i]</a>
+<a class="sourceLine" id="cb7-9" title="9">  fddm<span class="op">::</span><span class="kw">dfddm</span>(y, resp, a, mu, ndt, w, sv, <span class="dt">log =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb7-10" title="10">}</a></code></pre></div>
 <p>Second, we define the posterior predictive function (to be used in <code>pp_check</code>). Again, note the particular naming scheme used for the function name and the specific arguments the function expects. We use the package <code>rtdists</code> to generate random responses and associated response times in this function.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>posterior_predict_ddm <span class="ot">&lt;-</span> <span class="cf">function</span>(i, prep, <span class="at">negative_rt =</span> <span class="cn">FALSE</span>, ...) {</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">&quot;rtdists&quot;</span>)) {</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;Package &#39;rtdists&#39; must be installed for the function &#39;posterior_predict_ddm&#39;.&quot;</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  v <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="at">i =</span> i))</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  a <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="at">i =</span> i))</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  w <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="at">i =</span> i))</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  t0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="at">i =</span> i))</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  sv <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(brms<span class="sc">::</span><span class="fu">get_dpar</span>(prep, <span class="st">&quot;sv&quot;</span>, <span class="at">i =</span> i))</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">lengths</span>(<span class="fu">list</span>(v, a, w, t0, sv)), <span class="dv">1</span>) <span class="co"># I&#39;m pretty sure it&#39;s always 1</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> rtdists<span class="sc">::</span><span class="fu">rdiffusion</span>(</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">n =</span> n,</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">a =</span> a,</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">v =</span> v,</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">t0 =</span> t0,</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">z =</span> w <span class="sc">*</span> a,</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sv =</span> sv</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(out) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;q&quot;</span>, <span class="st">&quot;resp&quot;</span>)</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (negative_rt) { <span class="co"># code &quot;lower&quot; responses as negative RTs</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    out[[<span class="st">&quot;q&quot;</span>]] <span class="ot">&lt;-</span> out[[<span class="st">&quot;q&quot;</span>]] <span class="sc">*</span> <span class="fu">ifelse</span>(out[[<span class="st">&quot;resp&quot;</span>]] <span class="sc">==</span> <span class="st">&quot;upper&quot;</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>)</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(out[[<span class="st">&quot;q&quot;</span>]])</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">posterior_predict_ddm &lt;-<span class="st"> </span><span class="cf">function</span>(i, prep, <span class="dt">negative_rt =</span> <span class="ot">FALSE</span>, ...) {</a>
+<a class="sourceLine" id="cb8-2" title="2">  <span class="cf">if</span> (<span class="op">!</span><span class="kw">require</span>(<span class="st">&quot;rtdists&quot;</span>)) {</a>
+<a class="sourceLine" id="cb8-3" title="3">    <span class="kw">stop</span>(<span class="st">&quot;Package &#39;rtdists&#39; must be installed for the function &#39;posterior_predict_ddm&#39;.&quot;</span>)</a>
+<a class="sourceLine" id="cb8-4" title="4">  }</a>
+<a class="sourceLine" id="cb8-5" title="5">  </a>
+<a class="sourceLine" id="cb8-6" title="6">  v &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb8-7" title="7">  a &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb8-8" title="8">  w &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb8-9" title="9">  t0 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb8-10" title="10">  sv &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;sv&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb8-11" title="11">  n &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">lengths</span>(<span class="kw">list</span>(v, a, w, t0, sv)), <span class="dv">1</span>) <span class="co"># I&#39;m pretty sure it&#39;s always 1</span></a>
+<a class="sourceLine" id="cb8-12" title="12">  </a>
+<a class="sourceLine" id="cb8-13" title="13">  out &lt;-<span class="st"> </span>rtdists<span class="op">::</span><span class="kw">rdiffusion</span>(</a>
+<a class="sourceLine" id="cb8-14" title="14">    <span class="dt">n =</span> n,</a>
+<a class="sourceLine" id="cb8-15" title="15">    <span class="dt">a =</span> a,</a>
+<a class="sourceLine" id="cb8-16" title="16">    <span class="dt">v =</span> v,</a>
+<a class="sourceLine" id="cb8-17" title="17">    <span class="dt">t0 =</span> t0,</a>
+<a class="sourceLine" id="cb8-18" title="18">    <span class="dt">z =</span> w <span class="op">*</span><span class="st"> </span>a,</a>
+<a class="sourceLine" id="cb8-19" title="19">    <span class="dt">sv =</span> sv</a>
+<a class="sourceLine" id="cb8-20" title="20">  )</a>
+<a class="sourceLine" id="cb8-21" title="21">  <span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;q&quot;</span>, <span class="st">&quot;resp&quot;</span>)</a>
+<a class="sourceLine" id="cb8-22" title="22"></a>
+<a class="sourceLine" id="cb8-23" title="23">  <span class="cf">if</span> (negative_rt) { <span class="co"># code &quot;lower&quot; responses as negative RTs</span></a>
+<a class="sourceLine" id="cb8-24" title="24">    out[[<span class="st">&quot;q&quot;</span>]] &lt;-<span class="st"> </span>out[[<span class="st">&quot;q&quot;</span>]] <span class="op">*</span><span class="st"> </span><span class="kw">ifelse</span>(out[[<span class="st">&quot;resp&quot;</span>]] <span class="op">==</span><span class="st"> &quot;upper&quot;</span>, <span class="dv">1</span>, <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb8-25" title="25">  }</a>
+<a class="sourceLine" id="cb8-26" title="26">  </a>
+<a class="sourceLine" id="cb8-27" title="27">  <span class="kw">return</span>(out[[<span class="st">&quot;q&quot;</span>]])</a>
+<a class="sourceLine" id="cb8-28" title="28">}</a></code></pre></div>
+</div>
+<div id="cusfam-4par" class="section level2">
+<h2>Custom 4-Parameter DDM Definition</h2>
+<p>Next we will define the custom family “ddm4” for the 4-parameter variant that uses the PDF algorithm from the <code>fddm</code> package. This custom family will act as a direct check with the native Wiener family, as well as providing a reference for the time it takes for <code>Stan</code> to sample. Defining this 4-parameter custom family is nearly identical to what we just did for the “ddm” custom family above, but we add the suffix “4” to distinguish it.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">ddm4 &lt;-<span class="st"> </span><span class="kw">custom_family</span>(</a>
+<a class="sourceLine" id="cb9-2" title="2">  <span class="st">&quot;ddm4&quot;</span>, <span class="dt">dpars =</span> <span class="kw">c</span>(<span class="st">&quot;mu&quot;</span>, <span class="st">&quot;a&quot;</span>, <span class="st">&quot;ndt&quot;</span>, <span class="st">&quot;w&quot;</span>),</a>
+<a class="sourceLine" id="cb9-3" title="3">  <span class="dt">links =</span> <span class="kw">c</span>(<span class="st">&quot;identity&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;log&quot;</span>, <span class="st">&quot;logit&quot;</span>), </a>
+<a class="sourceLine" id="cb9-4" title="4">  <span class="dt">lb =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">ub =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="ot">NA</span>, <span class="ot">NA</span>, <span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb9-5" title="5">  <span class="dt">type =</span> <span class="st">&quot;real&quot;</span>, <span class="dt">vars =</span> <span class="st">&quot;resp[n]&quot;</span></a>
+<a class="sourceLine" id="cb9-6" title="6">)</a>
+<a class="sourceLine" id="cb9-7" title="7"></a>
+<a class="sourceLine" id="cb9-8" title="8">stan_funs4 &lt;-<span class="st"> &quot;</span></a>
+<a class="sourceLine" id="cb9-9" title="9"><span class="st">real ddm4_lpdf(real rt, real v, real a, real ndt, real w, int resp)</span></a>
+<a class="sourceLine" id="cb9-10" title="10"><span class="st">{</span></a>
+<a class="sourceLine" id="cb9-11" title="11"><span class="st">  // initialize output</span></a>
+<a class="sourceLine" id="cb9-12" title="12"><span class="st">  real logp = 0.0;</span></a>
+<a class="sourceLine" id="cb9-13" title="13"><span class="st">  </span></a>
+<a class="sourceLine" id="cb9-14" title="14"><span class="st">  // check parameter values</span></a>
+<a class="sourceLine" id="cb9-15" title="15"><span class="st">  if (a &lt;= 0 || is_inf(a) || is_nan(a)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb9-16" title="16"><span class="st">  if (is_inf(v) || is_nan(v)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb9-17" title="17"><span class="st">  if (ndt &lt; 0 || is_inf(ndt) || is_nan(ndt)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb9-18" title="18"><span class="st">  if (w &lt;= 0 || w &gt;= 1 || is_nan(w)) return negative_infinity();</span></a>
+<a class="sourceLine" id="cb9-19" title="19"></a>
+<a class="sourceLine" id="cb9-20" title="20"><span class="st">  // adjust parameters</span></a>
+<a class="sourceLine" id="cb9-21" title="21"><span class="st">  {</span></a>
+<a class="sourceLine" id="cb9-22" title="22"><span class="st">  real t = rt - ndt;</span></a>
+<a class="sourceLine" id="cb9-23" title="23"><span class="st">  real a_i = a;</span></a>
+<a class="sourceLine" id="cb9-24" title="24"><span class="st">  real v_i = (resp == 1) ? v : -v;</span></a>
+<a class="sourceLine" id="cb9-25" title="25"><span class="st">  real w_i = (resp == 1) ? w : 1 - w;</span></a>
+<a class="sourceLine" id="cb9-26" title="26"><span class="st">  real taa = t / (a_i * a_i);</span></a>
+<a class="sourceLine" id="cb9-27" title="27"><span class="st">  </span></a>
+<a class="sourceLine" id="cb9-28" title="28"><span class="st">  // define variables for use later (have to do it early because of Stan)</span></a>
+<a class="sourceLine" id="cb9-29" title="29"><span class="st">  // constants</span></a>
+<a class="sourceLine" id="cb9-30" title="30"><span class="st">  real log_2_pi_2 = 0.5 * log(2 * pi());</span></a>
+<a class="sourceLine" id="cb9-31" title="31"><span class="st">  // used in both large-time and small-time</span></a>
+<a class="sourceLine" id="cb9-32" title="32"><span class="st">  real mult = 0.0;</span></a>
+<a class="sourceLine" id="cb9-33" title="33"><span class="st">  real exp_err = 0.0;</span></a>
+<a class="sourceLine" id="cb9-34" title="34"><span class="st">  real gamma = -0.5 * pi() * pi() * taa;</span></a>
+<a class="sourceLine" id="cb9-35" title="35"><span class="st">  real summ = 0.0;</span></a>
+<a class="sourceLine" id="cb9-36" title="36"><span class="st">  int max_int = 1000;</span></a>
+<a class="sourceLine" id="cb9-37" title="37"><span class="st">  // used only in large-time</span></a>
+<a class="sourceLine" id="cb9-38" title="38"><span class="st">  int kl = 0;</span></a>
+<a class="sourceLine" id="cb9-39" title="39"><span class="st">  real k_dbl = 0.0;</span></a>
+<a class="sourceLine" id="cb9-40" title="40"><span class="st">  real bc = 1 / (pi() * sqrt(taa));</span></a>
+<a class="sourceLine" id="cb9-41" title="41"><span class="st">  // used only in small-time</span></a>
+<a class="sourceLine" id="cb9-42" title="42"><span class="st">  real minterms = 0.5 * sqrt(taa) - 0.5 * w_i; // min number of terms, truncates toward 0</span></a>
+<a class="sourceLine" id="cb9-43" title="43"><span class="st">  real term = 0.0;</span></a>
+<a class="sourceLine" id="cb9-44" title="44"><span class="st">  real rj = 0.0;</span></a>
+<a class="sourceLine" id="cb9-45" title="45"><span class="st">  int js = 0;</span></a>
+<a class="sourceLine" id="cb9-46" title="46"><span class="st">  </span></a>
+<a class="sourceLine" id="cb9-47" title="47"><span class="st">  // check large-time number of terms</span></a>
+<a class="sourceLine" id="cb9-48" title="48"><span class="st">  mult = - v_i * a_i * w_i - 0.5 * v_i*v_i * t - 2 * log(a_i);</span></a>
+<a class="sourceLine" id="cb9-49" title="49"><span class="st">  exp_err = 0.000001 * exp(-mult);</span></a>
+<a class="sourceLine" id="cb9-50" title="50"><span class="st">  if (bc &gt; max_int) { // boundary condition</span></a>
+<a class="sourceLine" id="cb9-51" title="51"><span class="st">    k_dbl = max_int;</span></a>
+<a class="sourceLine" id="cb9-52" title="52"><span class="st">  } else {</span></a>
+<a class="sourceLine" id="cb9-53" title="53"><span class="st">    if (exp_err * pi() * taa &lt; 1) { // error threshold is low enough</span></a>
+<a class="sourceLine" id="cb9-54" title="54"><span class="st">      k_dbl = sqrt(-2 * log(pi() * taa * exp_err) / (pi() * pi() * taa));</span></a>
+<a class="sourceLine" id="cb9-55" title="55"><span class="st">      if (k_dbl &gt; max_int) {</span></a>
+<a class="sourceLine" id="cb9-56" title="56"><span class="st">        k_dbl = max_int;</span></a>
+<a class="sourceLine" id="cb9-57" title="57"><span class="st">      } else {</span></a>
+<a class="sourceLine" id="cb9-58" title="58"><span class="st">        k_dbl = fmax(k_dbl, bc);</span></a>
+<a class="sourceLine" id="cb9-59" title="59"><span class="st">      }</span></a>
+<a class="sourceLine" id="cb9-60" title="60"><span class="st">    } else { // threshold not low enough, so set to boundary condition</span></a>
+<a class="sourceLine" id="cb9-61" title="61"><span class="st">      k_dbl = bc;</span></a>
+<a class="sourceLine" id="cb9-62" title="62"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb9-63" title="63"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb9-64" title="64"><span class="st">  while (kl &lt; k_dbl) kl += 1;</span></a>
+<a class="sourceLine" id="cb9-65" title="65"><span class="st">  </span></a>
+<a class="sourceLine" id="cb9-66" title="66"><span class="st">  // compare large-time and small-time</span></a>
+<a class="sourceLine" id="cb9-67" title="67"><span class="st">  if (kl &lt;= 1) { // do large-time</span></a>
+<a class="sourceLine" id="cb9-68" title="68"><span class="st">    for(jl in 1:kl) {</span></a>
+<a class="sourceLine" id="cb9-69" title="69"><span class="st">      summ += jl * sin(jl * w_i * pi()) * exp(gamma * jl * jl);</span></a>
+<a class="sourceLine" id="cb9-70" title="70"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb9-71" title="71"><span class="st">    logp += log(pi());</span></a>
+<a class="sourceLine" id="cb9-72" title="72"><span class="st">  } else { // do small-time</span></a>
+<a class="sourceLine" id="cb9-73" title="73"><span class="st">    mult = log(a_i) - log_2_pi_2 - 1.5 * log(t) - v_i * a_i * w_i</span></a>
+<a class="sourceLine" id="cb9-74" title="74"><span class="st">           - 0.5 * v_i*v_i * t;</span></a>
+<a class="sourceLine" id="cb9-75" title="75"><span class="st">    exp_err = 0.000001 * exp(-mult);</span></a>
+<a class="sourceLine" id="cb9-76" title="76"><span class="st">    gamma = -1 / (2 * taa);</span></a>
+<a class="sourceLine" id="cb9-77" title="77"><span class="st">    summ = w_i * exp(gamma * w_i*w_i); // initialize with j=0 term</span></a>
+<a class="sourceLine" id="cb9-78" title="78"><span class="st">    while (js &lt; minterms) {</span></a>
+<a class="sourceLine" id="cb9-79" title="79"><span class="st">      js += 1;</span></a>
+<a class="sourceLine" id="cb9-80" title="80"><span class="st">      rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb9-81" title="81"><span class="st">      summ -= rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb9-82" title="82"><span class="st">      rj = 2 * js + w_i;</span></a>
+<a class="sourceLine" id="cb9-83" title="83"><span class="st">      summ += rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb9-84" title="84"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb9-85" title="85"><span class="st">    js += 1;</span></a>
+<a class="sourceLine" id="cb9-86" title="86"><span class="st">    rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb9-87" title="87"><span class="st">    term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb9-88" title="88"><span class="st">    summ -= term;</span></a>
+<a class="sourceLine" id="cb9-89" title="89"><span class="st">    while (term &gt; exp_err) {</span></a>
+<a class="sourceLine" id="cb9-90" title="90"><span class="st">      rj = 2 * js + w_i;</span></a>
+<a class="sourceLine" id="cb9-91" title="91"><span class="st">      term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb9-92" title="92"><span class="st">      summ += term;</span></a>
+<a class="sourceLine" id="cb9-93" title="93"><span class="st">      if (term &lt;= exp_err) break;</span></a>
+<a class="sourceLine" id="cb9-94" title="94"><span class="st">      js += 1;</span></a>
+<a class="sourceLine" id="cb9-95" title="95"><span class="st">      rj = 2 * js - w_i;</span></a>
+<a class="sourceLine" id="cb9-96" title="96"><span class="st">      term = rj * exp(gamma * rj*rj);</span></a>
+<a class="sourceLine" id="cb9-97" title="97"><span class="st">      summ -= term;</span></a>
+<a class="sourceLine" id="cb9-98" title="98"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb9-99" title="99"><span class="st">    </span></a>
+<a class="sourceLine" id="cb9-100" title="100"><span class="st">    // check summ and chuck everything in logp</span></a>
+<a class="sourceLine" id="cb9-101" title="101"><span class="st">    if (summ &gt;= 0) {  // if result is negative, don&#39;t add to logp</span></a>
+<a class="sourceLine" id="cb9-102" title="102"><span class="st">      logp += mult + log(summ);</span></a>
+<a class="sourceLine" id="cb9-103" title="103"><span class="st">    }</span></a>
+<a class="sourceLine" id="cb9-104" title="104"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb9-105" title="105"><span class="st">  }</span></a>
+<a class="sourceLine" id="cb9-106" title="106"><span class="st">  </span></a>
+<a class="sourceLine" id="cb9-107" title="107"><span class="st">  return logp;</span></a>
+<a class="sourceLine" id="cb9-108" title="108"><span class="st">}</span></a>
+<a class="sourceLine" id="cb9-109" title="109"><span class="st">&quot;</span></a>
+<a class="sourceLine" id="cb9-110" title="110"></a>
+<a class="sourceLine" id="cb9-111" title="111">stanvars4 &lt;-<span class="st"> </span><span class="kw">stanvar</span>(<span class="dt">scode =</span> stan_funs4, <span class="dt">block =</span> <span class="st">&quot;functions&quot;</span>)</a>
+<a class="sourceLine" id="cb9-112" title="112"></a>
+<a class="sourceLine" id="cb9-113" title="113">priors4 &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
+<a class="sourceLine" id="cb9-114" title="114">  <span class="kw">set_prior</span>(<span class="st">&quot;normal(0, 2.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;Intercept&quot;</span>), <span class="co"># for mu (which is v)</span></a>
+<a class="sourceLine" id="cb9-115" title="115">  <span class="kw">set_prior</span>(<span class="st">&quot;gamma(3, 1.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;a&quot;</span>),</a>
+<a class="sourceLine" id="cb9-116" title="116">  <span class="kw">set_prior</span>(<span class="st">&quot;gamma(2, 4)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;ndt&quot;</span>),</a>
+<a class="sourceLine" id="cb9-117" title="117">  <span class="kw">set_prior</span>(<span class="st">&quot;beta(2, 2)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;w&quot;</span>)</a>
+<a class="sourceLine" id="cb9-118" title="118">)</a>
+<a class="sourceLine" id="cb9-119" title="119"></a>
+<a class="sourceLine" id="cb9-120" title="120">log_lik_ddm4 &lt;-<span class="st"> </span><span class="cf">function</span>(i, prep) {</a>
+<a class="sourceLine" id="cb9-121" title="121">  mu &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb9-122" title="122">  a &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb9-123" title="123">  w &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb9-124" title="124">  ndt &lt;-<span class="st"> </span>brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="dt">i =</span> i)</a>
+<a class="sourceLine" id="cb9-125" title="125">  y &lt;-<span class="st"> </span>prep<span class="op">$</span>data<span class="op">$</span>Y[i]</a>
+<a class="sourceLine" id="cb9-126" title="126">  resp &lt;-<span class="st"> </span>prep<span class="op">$</span>data<span class="op">$</span>resp[i]</a>
+<a class="sourceLine" id="cb9-127" title="127">  fddm<span class="op">::</span><span class="kw">dfddm</span>(y, resp, a, mu, ndt, w, <span class="dv">0</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb9-128" title="128">}</a>
+<a class="sourceLine" id="cb9-129" title="129"></a>
+<a class="sourceLine" id="cb9-130" title="130">posterior_predict_ddm4 &lt;-<span class="st"> </span><span class="cf">function</span>(i, prep, <span class="dt">negative_rt =</span> <span class="ot">FALSE</span>, ...) {</a>
+<a class="sourceLine" id="cb9-131" title="131">  <span class="cf">if</span> (<span class="op">!</span><span class="kw">require</span>(<span class="st">&quot;rtdists&quot;</span>)) {</a>
+<a class="sourceLine" id="cb9-132" title="132">    <span class="kw">stop</span>(<span class="st">&quot;Package &#39;rtdists&#39; must be installed for the function &#39;posterior_predict_ddm&#39;.&quot;</span>)</a>
+<a class="sourceLine" id="cb9-133" title="133">  }</a>
+<a class="sourceLine" id="cb9-134" title="134">  </a>
+<a class="sourceLine" id="cb9-135" title="135">  v &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;mu&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb9-136" title="136">  a &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;a&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb9-137" title="137">  w &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;w&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb9-138" title="138">  t0 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(brms<span class="op">::</span><span class="kw">get_dpar</span>(prep, <span class="st">&quot;ndt&quot;</span>, <span class="dt">i =</span> i))</a>
+<a class="sourceLine" id="cb9-139" title="139">  n &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">lengths</span>(<span class="kw">list</span>(v, a, w, t0)), <span class="dv">1</span>) <span class="co"># I&#39;m pretty sure it&#39;s always 1</span></a>
+<a class="sourceLine" id="cb9-140" title="140">  </a>
+<a class="sourceLine" id="cb9-141" title="141">  out &lt;-<span class="st"> </span>rtdists<span class="op">::</span><span class="kw">rdiffusion</span>(</a>
+<a class="sourceLine" id="cb9-142" title="142">    <span class="dt">n =</span> n,</a>
+<a class="sourceLine" id="cb9-143" title="143">    <span class="dt">a =</span> a,</a>
+<a class="sourceLine" id="cb9-144" title="144">    <span class="dt">v =</span> v,</a>
+<a class="sourceLine" id="cb9-145" title="145">    <span class="dt">t0 =</span> t0,</a>
+<a class="sourceLine" id="cb9-146" title="146">    <span class="dt">z =</span> w <span class="op">*</span><span class="st"> </span>a</a>
+<a class="sourceLine" id="cb9-147" title="147">  )</a>
+<a class="sourceLine" id="cb9-148" title="148">  <span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;q&quot;</span>, <span class="st">&quot;resp&quot;</span>)</a>
+<a class="sourceLine" id="cb9-149" title="149"></a>
+<a class="sourceLine" id="cb9-150" title="150">  <span class="cf">if</span> (negative_rt) { <span class="co"># code &quot;lower&quot; responses as negative RTs</span></a>
+<a class="sourceLine" id="cb9-151" title="151">    out[[<span class="st">&quot;q&quot;</span>]] &lt;-<span class="st"> </span>out[[<span class="st">&quot;q&quot;</span>]] <span class="op">*</span><span class="st"> </span><span class="kw">ifelse</span>(out[[<span class="st">&quot;resp&quot;</span>]] <span class="op">==</span><span class="st"> &quot;upper&quot;</span>, <span class="dv">1</span>, <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb9-152" title="152">  }</a>
+<a class="sourceLine" id="cb9-153" title="153">  </a>
+<a class="sourceLine" id="cb9-154" title="154">  <span class="kw">return</span>(out[[<span class="st">&quot;q&quot;</span>]])</a>
+<a class="sourceLine" id="cb9-155" title="155">}</a></code></pre></div>
+</div>
+<div id="cusfam-priors" class="section level2">
+<h2>Priors for the Custom Families</h2>
+<p>We defined the priors for the 5-parameter and 4-parameter custom families in the previous sections, but they might appear strange at first glance since most of the parameters are transformed according to their “links” in the call to <code>brms::custom_family()</code>. In particular, the parameters <code>a</code>, <code>ndt</code>, and <code>sv</code> (where applicable) use the “log” link function because their valid range is the positive real numbers; the parameter <code>w</code> uses the “logit” link function because it must be in the range <span class="math inline">\((0, 1)\)</span>. The parameter <code>mu</code> (<code>v</code>) uses the identity link function, so it is not transformed.</p>
+<p>Since the parameters <code>a</code>, <code>ndt</code>, <code>w</code>, and <code>sv</code> are transformed in the custom family definition, their priors are also transformed, and we must consider these transformations when choosing the priors. By inspecting the output of the <code>brms::make_stancode()</code> function, we see that the inverse transformation is applied to the priors. For example, consider the prior that we want to place on the parameter <code>a</code>; call it <span class="math inline">\(p(a)\)</span>. Since <code>a</code> uses the “log” link function, <span class="math inline">\(p(a)\)</span> will get transformed, and the sampler will apply the inverse link function and use <span class="math inline">\(exp(p(a))\)</span> as the prior. Working with the exponentiated version of a distribution can be awkward and may require lots of fiddling to adjust near the prior that we want. However, we can make this guess-and-check process a bit easier if we cleverly choose a prior distribution that is both flexible and has a well-known log-version.</p>
+<p>This clever choice of prior distribution makes our life easier in two ways. First, it helps with knowing the summary statistics of the distribution that will actually be used, such as the mean, median, mode, and variance of the log-distribution. Understanding how the distribution parameters affect these summary statistics remove a lot of “guessing” from trying to shape the prior. Second, it allows for easy conversion from the log-distribution parameters to the regular distribution parameters; this is necessary as we need to input the non-log version of the distribution into <code>brms</code>.</p>
+<p>The priors that we chose for the parameters <code>a</code>, <code>ndt</code>, and <code>sv</code> employ this technique by exploiting the relationship between the logistic and log-logistic probability distributions. The logistic distribution is defined such that its CDF is the logistic function; consequently, its PDF is very similar to that of the normal distribution, but with heavier tails. Upon exponentiation, the logistic distribution becomes the log-logistic distribution (i.e., the log of a log-logistic random variable follows the logistic distribution), and we can use the summary statistics to guide our fiddling with the shape of the prior (e.g., the median is just the scale parameter). Once we are satisfied with the shape of the log-logistic prior, we must convert the hyperparameters (of the log-logistic distribution) to the logistic distribution; conveniently, there exists an alternate parameterization for the log-logistic distribution that relates the parameters back to the logistic distribution.</p>
+<p>The prior for <code>w</code> gets transformed by the logistic function, so we just fiddle with plotting a prior under its inverse transform until we are satisfied with the shape.</p>
+<p>Below are the (post-transformation) priors:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">n &lt;-<span class="st"> </span><span class="fl">1e5</span></a>
+<a class="sourceLine" id="cb10-2" title="2"></a>
+<a class="sourceLine" id="cb10-3" title="3">p_a &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">logis =</span> <span class="kw">exp</span>(<span class="kw">rlogis</span>(n, <span class="dt">location =</span> <span class="fl">0.75</span>, <span class="dt">scale =</span> <span class="fl">0.5</span>)))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-4" title="4"><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> logis), <span class="dt">binwidth =</span> <span class="fl">0.25</span>, <span class="dt">boundary =</span> <span class="dv">0</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-5" title="5"><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">10</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-6" title="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;a, threshold separation&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-8" title="8"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),</a>
+<a class="sourceLine" id="cb10-9" title="9">        <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-10" title="10">        <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-11" title="11">        <span class="dt">axis.title.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb10-12" title="12">        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>))</a>
+<a class="sourceLine" id="cb10-13" title="13"></a>
+<a class="sourceLine" id="cb10-14" title="14">p_ndt &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">logis =</span> <span class="kw">exp</span>(<span class="kw">rlogis</span>(n, <span class="dt">location =</span> <span class="dv">-1</span>, <span class="dt">scale =</span> <span class="fl">0.5</span>)))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-15" title="15"><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> logis), <span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="dv">0</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-16" title="16"><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-17" title="17"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;ndt, non-decision time&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-18" title="18"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-19" title="19"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),</a>
+<a class="sourceLine" id="cb10-20" title="20">        <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-21" title="21">        <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-22" title="22">        <span class="dt">axis.title.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb10-23" title="23">        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>))</a>
+<a class="sourceLine" id="cb10-24" title="24"></a>
+<a class="sourceLine" id="cb10-25" title="25">p_w &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">logis =</span> <span class="kw">plogis</span>(<span class="kw">rlogis</span>(n, <span class="dt">location =</span> <span class="dv">0</span>, <span class="dt">scale =</span> <span class="dv">2</span><span class="op">/</span><span class="dv">3</span>)))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-26" title="26"><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> logis), <span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="dv">0</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-27" title="27"><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-28" title="28"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;w, initial bias&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-29" title="29"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-30" title="30"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),</a>
+<a class="sourceLine" id="cb10-31" title="31">        <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-32" title="32">        <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-33" title="33">        <span class="dt">axis.title.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb10-34" title="34">        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>))</a>
+<a class="sourceLine" id="cb10-35" title="35"></a>
+<a class="sourceLine" id="cb10-36" title="36">p_sv &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">logis =</span> <span class="kw">exp</span>(<span class="kw">rlogis</span>(n, <span class="dt">location =</span> <span class="fl">-0.5</span>, <span class="dt">scale =</span> <span class="fl">0.5</span>)))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-37" title="37"><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> logis), <span class="dt">binwidth =</span> <span class="fl">0.1</span>, <span class="dt">boundary =</span> <span class="dv">0</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-38" title="38"><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">2.5</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-39" title="39"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;sv, variability in the drift rate&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-40" title="40"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-41" title="41"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),</a>
+<a class="sourceLine" id="cb10-42" title="42">        <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-43" title="43">        <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb10-44" title="44">        <span class="dt">axis.title.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb10-45" title="45">        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>))</a>
+<a class="sourceLine" id="cb10-46" title="46"></a>
+<a class="sourceLine" id="cb10-47" title="47">cowplot<span class="op">::</span><span class="kw">plot_grid</span>(p_a, p_ndt, p_sv, p_w, <span class="dt">ncol =</span> <span class="dv">2</span>)</a></code></pre></div>
+</div>
 </div>
 <div id="parrec" class="section level1">
 <h1>Parameter Recovery</h1>
 <hr class="sec1">
-<p>Now that we’ve got our custom family ready in <code>brms</code>, we’ll do a basic parameter recovery to show that everything works as expected.</p>
-<div id="parrec-gendata" class="section level2">
+<p>Now that we’ve got our custom families ready in <code>brms</code>, we’ll do a basic parameter recovery for each of the custom families and compare it with the native 4-parameter family to show that everything works as expected.</p>
+<div id="parrec-data" class="section level2">
 <h2>Generating Some Data for the Parameter Recovery</h2>
-<p>Using the package <code>rtdists</code>, we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>v <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">2</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>t0 <span class="ot">&lt;-</span> <span class="fl">0.3</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fl">0.5</span> <span class="co"># rtdists uses z = w*a, defaults to a/2</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>sv <span class="ot">&lt;-</span> <span class="fl">0.8</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234567</span>)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>par_rec_data <span class="ot">&lt;-</span> rtdists<span class="sc">::</span><span class="fu">rdiffusion</span>(<span class="at">n =</span> N, <span class="at">a =</span> a, <span class="at">v =</span> v, <span class="at">t0 =</span> t0, <span class="at">sv =</span> sv)</span></code></pre></div>
+<p>Using the package <code>rtdists</code> (<span class="citation">Singmann et al. (2020)</span>), we will generate some response times using the given set of parameters. For reproducibility, we will set the seed.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">a &lt;-<span class="st"> </span><span class="dv">1</span></a>
+<a class="sourceLine" id="cb11-2" title="2">v &lt;-<span class="st"> </span><span class="dv">-2</span></a>
+<a class="sourceLine" id="cb11-3" title="3">t0 &lt;-<span class="st"> </span><span class="fl">0.3</span></a>
+<a class="sourceLine" id="cb11-4" title="4">w &lt;-<span class="st"> </span><span class="fl">0.5</span> <span class="co"># rtdists uses z = w*a, defaults to a/2</span></a>
+<a class="sourceLine" id="cb11-5" title="5">sv &lt;-<span class="st"> </span><span class="fl">0.8</span></a>
+<a class="sourceLine" id="cb11-6" title="6">N &lt;-<span class="st"> </span><span class="dv">1000</span></a>
+<a class="sourceLine" id="cb11-7" title="7"><span class="kw">set.seed</span>(<span class="dv">1234567</span>)</a>
+<a class="sourceLine" id="cb11-8" title="8">par_rec_data &lt;-<span class="st"> </span>rtdists<span class="op">::</span><span class="kw">rdiffusion</span>(<span class="dt">n =</span> N, <span class="dt">a =</span> a, <span class="dt">v =</span> v, <span class="dt">t0 =</span> t0, <span class="dt">sv =</span> sv)</a></code></pre></div>
 <p>Next, we need to update our <code>stanvars</code> object to incorporate the data we just generated</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>stanvars_pr <span class="ot">&lt;-</span> stanvars <span class="sc">+</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stanvar</span>(<span class="at">x =</span> <span class="fu">as.integer</span>(par_rec_data[[<span class="st">&quot;response&quot;</span>]]), </span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">name =</span> <span class="st">&quot;resp&quot;</span>, <span class="at">scode =</span> <span class="st">&quot;int resp[N];&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">stanvars_pr &lt;-<span class="st"> </span>stanvars <span class="op">+</span></a>
+<a class="sourceLine" id="cb12-2" title="2"><span class="st">  </span><span class="kw">stanvar</span>(<span class="dt">x =</span> <span class="kw">as.integer</span>(par_rec_data[[<span class="st">&quot;response&quot;</span>]]), </a>
+<a class="sourceLine" id="cb12-3" title="3">          <span class="dt">name =</span> <span class="st">&quot;resp&quot;</span>, <span class="dt">scode =</span> <span class="st">&quot;int resp[N];&quot;</span>)</a></code></pre></div>
+<p>We must also update <code>stanvars</code> for our 4-parameter custom family.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">stanvars_pr4 &lt;-<span class="st"> </span>stanvars4 <span class="op">+</span></a>
+<a class="sourceLine" id="cb13-2" title="2"><span class="st">  </span><span class="kw">stanvar</span>(<span class="dt">x =</span> <span class="kw">as.integer</span>(par_rec_data[[<span class="st">&quot;response&quot;</span>]]),</a>
+<a class="sourceLine" id="cb13-3" title="3">          <span class="dt">name =</span> <span class="st">&quot;resp&quot;</span>, <span class="dt">scode =</span> <span class="st">&quot;int resp[N];&quot;</span>)</a></code></pre></div>
 <p>If we desire, we may check the <code>Stan</code> code that <code>brms</code> will generate to do the sampling. This step is optional, but it is a good opportunity to catch errors that we made in the code.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make_stancode</span>(rt <span class="sc">~</span> <span class="dv">1</span>,</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>              <span class="at">data =</span> par_rec_data,</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">family =</span> ddm,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">stanvars =</span> stanvars_pr, </span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">prior =</span> priors</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>              )</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1"><span class="kw">make_stancode</span>(rt <span class="op">~</span><span class="st"> </span><span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb14-2" title="2">              <span class="dt">data =</span> par_rec_data,</a>
+<a class="sourceLine" id="cb14-3" title="3">              <span class="dt">family =</span> ddm,</a>
+<a class="sourceLine" id="cb14-4" title="4">              <span class="dt">stanvars =</span> stanvars_pr,</a>
+<a class="sourceLine" id="cb14-5" title="5">              <span class="dt">prior =</span> priors</a>
+<a class="sourceLine" id="cb14-6" title="6">              )</a></code></pre></div>
 </div>
-<div id="parrec-est" class="section level2">
+<div id="parrec-samp" class="section level2">
 <h2>Estimation (i.e., Sampling)</h2>
 <p>Now we let <code>brms</code> call <code>Stan</code> to run its sampling algorithm and generate estimates for the model parameters. Estimation usually takes on the scale of 90 seconds per chain with 2000 iterations and the default control options (i.e., <code>max_treedepth = 10</code> and <code>adapt_delta = 0.8</code>). Because this process can take a little while, we can also load the fit from file.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_parrec_5par <span class="ot">&lt;-</span> <span class="fu">brm</span>(rt <span class="sc">~</span> <span class="dv">1</span>,</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">family =</span> ddm,</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">prior =</span> priors,</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                       <span class="at">stanvars =</span> stanvars_pr,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                       <span class="at">data =</span> par_rec_data,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">chains =</span> <span class="dv">1</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">iter =</span> <span class="dv">2000</span>,</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                       <span class="at">warmup =</span> <span class="dv">1000</span>,</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                       <span class="at">thin =</span> <span class="dv">1</span>,</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                       <span class="at">cores =</span> <span class="fu">getOption</span>(<span class="st">&quot;mc.cores&quot;</span>, <span class="dv">1</span>),</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                       <span class="at">control =</span> <span class="fu">list</span>(</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                         <span class="at">max_treedepth =</span> <span class="dv">10</span>,</span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                         <span class="at">adapt_delta =</span> <span class="fl">0.8</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                         )</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                       )</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1">fit_parrec_5par &lt;-<span class="st"> </span><span class="kw">brm</span>(rt <span class="op">~</span><span class="st"> </span><span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb15-2" title="2">                       <span class="dt">family =</span> ddm,</a>
+<a class="sourceLine" id="cb15-3" title="3">                       <span class="dt">prior =</span> priors,</a>
+<a class="sourceLine" id="cb15-4" title="4">                       <span class="dt">stanvars =</span> stanvars_pr,</a>
+<a class="sourceLine" id="cb15-5" title="5">                       <span class="dt">data =</span> par_rec_data,</a>
+<a class="sourceLine" id="cb15-6" title="6">                       <span class="dt">chains =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb15-7" title="7">                       <span class="dt">iter =</span> <span class="dv">2000</span>,</a>
+<a class="sourceLine" id="cb15-8" title="8">                       <span class="dt">warmup =</span> <span class="dv">1000</span>,</a>
+<a class="sourceLine" id="cb15-9" title="9">                       <span class="dt">thin =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb15-10" title="10">                       <span class="dt">cores =</span> <span class="kw">getOption</span>(<span class="st">&quot;mc.cores&quot;</span>, <span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb15-11" title="11">                       <span class="dt">control =</span> <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb15-12" title="12">                         <span class="dt">max_treedepth =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb15-13" title="13">                         <span class="dt">adapt_delta =</span> <span class="fl">0.8</span></a>
+<a class="sourceLine" id="cb15-14" title="14">                         )</a>
+<a class="sourceLine" id="cb15-15" title="15">                       )</a></code></pre></div>
 <p>We will also save the fit in case we need it for future use.</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_parrec_5par,</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">file =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">&quot;fits&quot;</span>, <span class="st">&quot;fit_parrec_5par.RDS&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" title="1"><span class="kw">saveRDS</span>(fit_parrec_5par,</a>
+<a class="sourceLine" id="cb16-2" title="2">        <span class="dt">file =</span> <span class="kw">file.path</span>(<span class="kw">getwd</span>(), <span class="st">&quot;fits&quot;</span>, <span class="st">&quot;fit_parrec_5par.RDS&quot;</span>))</a></code></pre></div>
+<p>Similarly for the 4-parameter custom family:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" title="1">fit_parrec_4par &lt;-<span class="st"> </span><span class="kw">brm</span>(rt <span class="op">~</span><span class="st"> </span><span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb17-2" title="2">                       <span class="dt">family =</span> ddm4,</a>
+<a class="sourceLine" id="cb17-3" title="3">                       <span class="dt">prior =</span> priors4,</a>
+<a class="sourceLine" id="cb17-4" title="4">                       <span class="dt">stanvars =</span> stanvars_pr4,</a>
+<a class="sourceLine" id="cb17-5" title="5">                       <span class="dt">data =</span> par_rec_data,</a>
+<a class="sourceLine" id="cb17-6" title="6">                       <span class="dt">chains =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb17-7" title="7">                       <span class="dt">iter =</span> <span class="dv">2000</span>,</a>
+<a class="sourceLine" id="cb17-8" title="8">                       <span class="dt">warmup =</span> <span class="dv">1000</span>,</a>
+<a class="sourceLine" id="cb17-9" title="9">                       <span class="dt">thin =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb17-10" title="10">                       <span class="dt">cores =</span> <span class="kw">getOption</span>(<span class="st">&quot;mc.cores&quot;</span>, <span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb17-11" title="11">                       <span class="dt">control =</span> <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb17-12" title="12">                         <span class="dt">max_treedepth =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb17-13" title="13">                         <span class="dt">adapt_delta =</span> <span class="fl">0.8</span></a>
+<a class="sourceLine" id="cb17-14" title="14">                         )</a>
+<a class="sourceLine" id="cb17-15" title="15">                       )</a></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" title="1"><span class="kw">saveRDS</span>(fit_parrec_4par,</a>
+<a class="sourceLine" id="cb18-2" title="2">        <span class="dt">file =</span> <span class="kw">file.path</span>(<span class="kw">getwd</span>(), <span class="st">&quot;fits&quot;</span>, <span class="st">&quot;fit_parrec_4par.RDS&quot;</span>))</a></code></pre></div>
+<p>And again, we estimate using the native 4-parameter Wiener distribution. Note that sampling a native distribution is more straightforward than a custom family. We only need to define the priors on the model parameters and relabel the generated data.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" title="1">priorsw &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
+<a class="sourceLine" id="cb19-2" title="2">  <span class="kw">set_prior</span>(<span class="st">&quot;normal(0, 2.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;Intercept&quot;</span>), <span class="co"># for mu (which is v)</span></a>
+<a class="sourceLine" id="cb19-3" title="3">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0.75, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;bs&quot;</span>),</a>
+<a class="sourceLine" id="cb19-4" title="4">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(-1, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;ndt&quot;</span>),</a>
+<a class="sourceLine" id="cb19-5" title="5">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0, 0.65)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;bias&quot;</span>)</a>
+<a class="sourceLine" id="cb19-6" title="6">)</a>
+<a class="sourceLine" id="cb19-7" title="7"></a>
+<a class="sourceLine" id="cb19-8" title="8">par_rec_dataw &lt;-<span class="st"> </span>par_rec_data</a>
+<a class="sourceLine" id="cb19-9" title="9">par_rec_dataw[[<span class="st">&quot;response2&quot;</span>]] &lt;-<span class="st"> </span><span class="kw">as.integer</span>(par_rec_dataw[[<span class="st">&quot;response&quot;</span>]]) <span class="op">-</span><span class="st"> </span><span class="dv">1</span></a></code></pre></div>
+<p>Then we can proceed with sampling.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" title="1">fit_parrec_wiener &lt;-<span class="st"> </span><span class="kw">brm</span>(rt <span class="op">|</span><span class="st"> </span><span class="kw">dec</span>(response2) <span class="op">~</span><span class="st"> </span><span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb20-2" title="2">                         <span class="dt">family =</span> <span class="kw">wiener</span>(<span class="dt">link_bs =</span> <span class="st">&quot;log&quot;</span>,</a>
+<a class="sourceLine" id="cb20-3" title="3">                                         <span class="dt">link_ndt =</span> <span class="st">&quot;log&quot;</span>,</a>
+<a class="sourceLine" id="cb20-4" title="4">                                         <span class="dt">link_bias =</span> <span class="st">&quot;logit&quot;</span>),</a>
+<a class="sourceLine" id="cb20-5" title="5">                         <span class="dt">prior =</span> priorsw,</a>
+<a class="sourceLine" id="cb20-6" title="6">                         <span class="dt">data =</span> par_rec_dataw,</a>
+<a class="sourceLine" id="cb20-7" title="7">                         <span class="dt">chains =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb20-8" title="8">                         <span class="dt">iter =</span> <span class="dv">2000</span>,</a>
+<a class="sourceLine" id="cb20-9" title="9">                         <span class="dt">warmup =</span> <span class="dv">1000</span>,</a>
+<a class="sourceLine" id="cb20-10" title="10">                         <span class="dt">thin =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb20-11" title="11">                         <span class="dt">cores =</span> <span class="kw">getOption</span>(<span class="st">&quot;mc.cores&quot;</span>, <span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb20-12" title="12">                         <span class="dt">control =</span> <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb20-13" title="13">                           <span class="dt">max_treedepth =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb20-14" title="14">                           <span class="dt">adapt_delta =</span> <span class="fl">0.8</span></a>
+<a class="sourceLine" id="cb20-15" title="15">                           )</a>
+<a class="sourceLine" id="cb20-16" title="16">                         )</a></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb21-1" title="1"><span class="kw">saveRDS</span>(fit_parrec_wiener,</a>
+<a class="sourceLine" id="cb21-2" title="2">        <span class="dt">file =</span> <span class="kw">file.path</span>(<span class="kw">getwd</span>(), <span class="st">&quot;fits&quot;</span>, <span class="st">&quot;fit_parrec_wiener.RDS&quot;</span>))</a></code></pre></div>
+<p>From the <code>Stan</code> output, we see that fitting the 5-parameter custom family DDM took 100 seconds. Contrastingly, it took about 40 seconds per chain to fit either the 4-parameter custom family DDM or the 4-parameter Wiener family native to <code>brms</code>.</p>
+<p>Now we’ll take a quick look at the summaries of the sampling.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb22-1" title="1"><span class="kw">print</span>(fit_parrec_4par)</a>
+<a class="sourceLine" id="cb22-2" title="2"><span class="kw">print</span>(fit_parrec_wiener)</a></code></pre></div>
+<p>The 4-parameter custom family and native 4-parameter Wiener family yield extremely similar estimates and successfully recover three of the four parameters; the threshold separation (<span class="math inline">\(a\)</span>), non-decision time (<span class="math inline">\(t0\)</span>), and initial bias (<span class="math inline">\(w\)</span>) are all recovered successfully. The estimates for the drift rate (<span class="math inline">\(v\)</span>) are somewhat close to the underlying value in both families, but remain biased (<span class="math inline">\(-1.82\)</span> vs <span class="math inline">\(-2.00\)</span>).</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb23-1" title="1"><span class="kw">print</span>(fit_parrec_5par)</a></code></pre></div>
+<p>The 5-parameter custom family successfully recovers four of the five parameters successfully, with the only exception being the variability in the drift rate (<span class="math inline">\(sv\)</span>). The estimates for <span class="math inline">\(sv\)</span> are somewhat close to the underlying value, but there is still moderate uncertainty in this estimate. Importantly, however, the 5-parameter custom family is able to successfully recover the drift rate (<span class="math inline">\(v\)</span>) without bias.</p>
+<p>We can see the differences in the estimates for the drift rate by plotting histograms of the posterior draws from each family.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb24-1" title="1">n &lt;-<span class="st"> </span><span class="dv">1000</span> <span class="co"># number of posterior draws (excluding warmup)</span></a>
+<a class="sourceLine" id="cb24-2" title="2">models &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Wiener&quot;</span>, <span class="st">&quot;4-par DDM&quot;</span>, <span class="st">&quot;5-par DDM&quot;</span>)</a>
+<a class="sourceLine" id="cb24-3" title="3">colors &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;#b34d4d&quot;</span>, <span class="st">&quot;#4da7b3&quot;</span>, <span class="st">&quot;#5cc639&quot;</span>)</a>
+<a class="sourceLine" id="cb24-4" title="4"></a>
+<a class="sourceLine" id="cb24-5" title="5">df_v &lt;-<span class="st"> </span><span class="kw">data.frame</span>(</a>
+<a class="sourceLine" id="cb24-6" title="6">  <span class="dt">model =</span> <span class="kw">rep</span>(models, <span class="dt">each =</span> n),</a>
+<a class="sourceLine" id="cb24-7" title="7">  <span class="dt">v =</span> <span class="kw">c</span>(</a>
+<a class="sourceLine" id="cb24-8" title="8">    rstan<span class="op">::</span><span class="kw">extract</span>(fit_parrec_wiener[[<span class="st">&quot;fit&quot;</span>]],</a>
+<a class="sourceLine" id="cb24-9" title="9">                   <span class="dt">pars =</span> <span class="st">&quot;b_Intercept&quot;</span>)[[<span class="st">&quot;b_Intercept&quot;</span>]],</a>
+<a class="sourceLine" id="cb24-10" title="10">    rstan<span class="op">::</span><span class="kw">extract</span>(fit_parrec_4par[[<span class="st">&quot;fit&quot;</span>]],</a>
+<a class="sourceLine" id="cb24-11" title="11">                   <span class="dt">pars =</span> <span class="st">&quot;b_Intercept&quot;</span>)[[<span class="st">&quot;b_Intercept&quot;</span>]],</a>
+<a class="sourceLine" id="cb24-12" title="12">    rstan<span class="op">::</span><span class="kw">extract</span>(fit_parrec_5par[[<span class="st">&quot;fit&quot;</span>]],</a>
+<a class="sourceLine" id="cb24-13" title="13">                   <span class="dt">pars =</span> <span class="st">&quot;b_Intercept&quot;</span>)[[<span class="st">&quot;b_Intercept&quot;</span>]]</a>
+<a class="sourceLine" id="cb24-14" title="14">  )</a>
+<a class="sourceLine" id="cb24-15" title="15">)</a>
+<a class="sourceLine" id="cb24-16" title="16"></a>
+<a class="sourceLine" id="cb24-17" title="17"><span class="kw">ggplot</span>(<span class="dt">data =</span> df_v,</a>
+<a class="sourceLine" id="cb24-18" title="18">       <span class="kw">aes</span>(<span class="dt">x =</span> v,</a>
+<a class="sourceLine" id="cb24-19" title="19">           <span class="dt">color =</span> <span class="kw">factor</span>(model, <span class="dt">levels =</span> models),</a>
+<a class="sourceLine" id="cb24-20" title="20">           <span class="dt">fill =</span> <span class="kw">factor</span>(model, <span class="dt">levels =</span> models))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-21" title="21"><span class="st">  </span><span class="kw">geom_density</span>(<span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-22" title="22"><span class="st">  </span><span class="kw">scale_color_manual</span>(<span class="dt">values =</span> colors, <span class="dt">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-23" title="23"><span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> colors,</a>
+<a class="sourceLine" id="cb24-24" title="24">                    <span class="dt">name =</span> <span class="st">&quot;Model&quot;</span>,</a>
+<a class="sourceLine" id="cb24-25" title="25">                    <span class="dt">labels =</span> <span class="kw">c</span>(<span class="st">&quot;4-par Wiener&quot;</span>, <span class="st">&quot;4-par DDM&quot;</span>, <span class="st">&quot;5-par DDM&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-26" title="26"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;v, drift rate&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Posterior Density&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-27" title="27"><span class="st">  </span><span class="kw">guides</span>(<span class="dt">fill =</span> <span class="kw">guide_legend</span>(<span class="dt">override.aes =</span> <span class="kw">list</span>(<span class="dt">color =</span> colors))) <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-28" title="28"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb24-29" title="29"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),</a>
+<a class="sourceLine" id="cb24-30" title="30">        <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb24-31" title="31">        <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">16</span>),</a>
+<a class="sourceLine" id="cb24-32" title="32">        <span class="dt">axis.title.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb24-33" title="33">        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">20</span>),</a>
+<a class="sourceLine" id="cb24-34" title="34">        <span class="dt">legend.position =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.82</span>),</a>
+<a class="sourceLine" id="cb24-35" title="35">        <span class="dt">legend.box =</span> <span class="st">&quot;vertical&quot;</span>,</a>
+<a class="sourceLine" id="cb24-36" title="36">        <span class="dt">legend.direction =</span> <span class="st">&quot;vertical&quot;</span>,</a>
+<a class="sourceLine" id="cb24-37" title="37">        <span class="dt">legend.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> <span class="st">&quot;white&quot;</span>),</a>
+<a class="sourceLine" id="cb24-38" title="38">        <span class="dt">legend.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">14</span>),</a>
+<a class="sourceLine" id="cb24-39" title="39">        <span class="dt">legend.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">13</span>))</a></code></pre></div>
+<p>The main difference between the 4-parameter and 5-parameter DDM families (aside from the fitting times) is that the 5-parameter DDM captures variability in the drift rate, whereas the 4-parameter DDM attempts to estimate the variable drift rate by adding a bias. There is no difference in the estimates of the other parameters (threshold separation, non-decision time, initial bias) between the 4-parameter and 5-parameter DDM.</p>
 </div>
 <div id="parrec-post" class="section level2">
 <h2>Posterior Predictive Analysis</h2>
 <p>We will use the two functions that <a href="#brms-pp">we defined previously</a> (the log-likelihood function and the posterior predictive function) to aid <code>brms</code> with further analysis of our custom family.</p>
-<p>The <code>loo</code> function can compare two models; in our case, we will use it to compare the 5-parameter DDM against the 4-parameter DDM.</p>
-<p>First we load the 4-parameter fit (done analogously to the 5-parameter version in file <code>parameter_recovery_4_par.R</code>).</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_parrec_4par <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="at">file =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">&quot;fits&quot;</span>,</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>                                            <span class="st">&quot;fit_parrec_4par.RDS&quot;</span>))</span></code></pre></div>
-<p>Then we run <code>loo</code>.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">loo</span>(fit_parrec_5par, fit_parrec_4par)</span></code></pre></div>
-<p>Based on the output of the <code>loo</code> function, we can see that one model is slightly preferred over the other.</p>
-<p>Last, we can use the posterior predictive function that <a href="#brms-pp">we defined earlier</a> to run posterior-predictive checking.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pp_check</span>(fit_parrec_5par)</span></code></pre></div>
+<p>The <code>loo</code> function can compare two models; in our case, we will use it to perform three pairwise comparisons between the three models that we are testing. First, we’ll compare the two custom <code>brms</code> families:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb25-1" title="1"><span class="kw">loo</span>(fit_parrec_5par, fit_parrec_4par)</a></code></pre></div>
+<p>Second, we’ll compare the two 4-parameter variants:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb26-1" title="1"><span class="kw">loo</span>(fit_parrec_4par, fit_parrec_wiener)</a></code></pre></div>
+<p>Third, we’ll compare the custom 5-parameter variant to the native 4-parameter Wiener distribution:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb27-1" title="1"><span class="kw">loo</span>(fit_parrec_5par, fit_parrec_wiener)</a></code></pre></div>
+<p>Based on the output of the <code>loo</code> function, we can see that the 5-parameter model has an ever so slightly higher estimate for ELPD than the 4-parameter models. However, the standard error on the difference between the ELPD estimates is much larger than the actual difference between the ELPD estimates. Therefore, <code>loo</code> suggests that these models perform equally well for the generated data. The main difference between the 5-parameter and 4-parameter models is potential biasing of the drift rate <span class="math inline">\(v\)</span> if its variability is not included in the model (parameter <span class="math inline">\(sv\)</span>).</p>
+<p>Last, we can use the posterior predictive function that <a href="#brms-pp">we defined earlier</a> to run posterior-predictive checking for each of the three models</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb28-1" title="1"><span class="kw">pp_check</span>(fit_parrec_5par)</a></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb29-1" title="1"><span class="kw">pp_check</span>(fit_parrec_4par)</a></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb30-1" title="1"><span class="kw">pp_check</span>(fit_parrec_wiener)</a></code></pre></div>
 </div>
 </div>
-<div id="realworld" class="section level1">
+<div id="rewrld" class="section level1">
 <h1>Fitting Real-World Data</h1>
 <hr class="sec1">
 <p>Now we’ll try fitting some actual data, because this is how the software is intended to be used.</p>
-<div id="realworld-loaddata" class="section level2">
+<div id="rewrld-data" class="section level2">
 <h2>Load Real-World Data</h2>
-<p>Some text.</p>
+<p>Load the speed-accuracy data from the <code>rtdists</code> package and only consider the frequency “high” for words and non-words. Also update the stanvars to include this dataset.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb31-1" title="1"><span class="kw">data</span>(speed_acc, <span class="dt">package =</span> <span class="st">&quot;rtdists&quot;</span>)</a>
+<a class="sourceLine" id="cb31-2" title="2">speed_acc &lt;-<span class="st"> </span><span class="kw">droplevels</span>(speed_acc[<span class="op">!</span>speed_acc<span class="op">$</span>censor,]) <span class="co"># remove extreme RTs</span></a>
+<a class="sourceLine" id="cb31-3" title="3">speed_acc &lt;-<span class="st"> </span><span class="kw">droplevels</span>(speed_acc[ speed_acc<span class="op">$</span>frequency <span class="op">%in%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb31-4" title="4"><span class="st">                                     </span><span class="kw">c</span>(<span class="st">&quot;high&quot;</span>, <span class="st">&quot;nw_high&quot;</span>),])</a>
+<a class="sourceLine" id="cb31-5" title="5"></a>
+<a class="sourceLine" id="cb31-6" title="6">stanvars_rw &lt;-<span class="st"> </span>stanvars <span class="op">+</span></a>
+<a class="sourceLine" id="cb31-7" title="7"><span class="st">  </span><span class="kw">stanvar</span>(<span class="dt">x =</span> <span class="kw">as.integer</span>(speed_acc[[<span class="st">&quot;response&quot;</span>]]), </a>
+<a class="sourceLine" id="cb31-8" title="8">          <span class="dt">name =</span> <span class="st">&quot;resp&quot;</span>, <span class="dt">scode =</span> <span class="st">&quot;int resp[N];&quot;</span>)</a></code></pre></div>
 </div>
-<div id="realworld-est" class="section level2">
+<div id="rewrld-samp" class="section level2">
 <h2>Estimation (i.e., Sampling)</h2>
-<p>Some text.</p>
-<p>more text.</p>
+<p>We need to define the modelling formula and set the priors. We also set the contrast to orthonormal (which is why the <code>bayestestR</code> package is loaded) and define a function to randomly generate initial values for the sampling.</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb32-1" title="1"><span class="kw">options</span>(<span class="dt">contrasts =</span> <span class="kw">c</span>(<span class="st">&#39;contr.orthonorm&#39;</span>, <span class="st">&#39;contr.poly&#39;</span>))</a>
+<a class="sourceLine" id="cb32-2" title="2"></a>
+<a class="sourceLine" id="cb32-3" title="3">formula &lt;-<span class="st"> </span><span class="kw">brmsformula</span>(rt <span class="op">~</span><span class="st"> </span>condition<span class="op">*</span>frequency,</a>
+<a class="sourceLine" id="cb32-4" title="4">                       a <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Intercept <span class="op">+</span><span class="st"> </span>condition,</a>
+<a class="sourceLine" id="cb32-5" title="5">                       ndt <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Intercept <span class="op">+</span><span class="st"> </span>condition,</a>
+<a class="sourceLine" id="cb32-6" title="6">                       w <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Intercept <span class="op">+</span><span class="st"> </span>condition,</a>
+<a class="sourceLine" id="cb32-7" title="7">                       sv <span class="op">~</span><span class="st"> </span><span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb32-8" title="8">                       <span class="dt">center =</span> <span class="ot">FALSE</span></a>
+<a class="sourceLine" id="cb32-9" title="9">                       )</a>
+<a class="sourceLine" id="cb32-10" title="10"></a>
+<a class="sourceLine" id="cb32-11" title="11">priors &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
+<a class="sourceLine" id="cb32-12" title="12">  <span class="kw">set_prior</span>(<span class="st">&quot;student_t(3, 0, 2.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;b&quot;</span>, <span class="dt">coef =</span> <span class="st">&quot;Intercept&quot;</span>), <span class="co"># for mu (which is v)</span></a>
+<a class="sourceLine" id="cb32-13" title="13">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0.75, 0.5)&quot;</span>, <span class="dt">coef =</span> <span class="st">&quot;Intercept&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;a&quot;</span>),</a>
+<a class="sourceLine" id="cb32-14" title="14">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(-1, 0.5)&quot;</span>, <span class="dt">coef =</span> <span class="st">&quot;Intercept&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;ndt&quot;</span>),</a>
+<a class="sourceLine" id="cb32-15" title="15">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(0, 0.67)&quot;</span>, <span class="dt">coef =</span> <span class="st">&quot;Intercept&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;w&quot;</span>),</a>
+<a class="sourceLine" id="cb32-16" title="16">  <span class="kw">set_prior</span>(<span class="st">&quot;logistic(-0.5, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;Intercept&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;sv&quot;</span>),</a>
+<a class="sourceLine" id="cb32-17" title="17">  <span class="kw">set_prior</span>(<span class="st">&quot;student_t(4, 0, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;b&quot;</span>),</a>
+<a class="sourceLine" id="cb32-18" title="18">  <span class="kw">set_prior</span>(<span class="st">&quot;student_t(4, 0, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;b&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;a&quot;</span>),</a>
+<a class="sourceLine" id="cb32-19" title="19">  <span class="kw">set_prior</span>(<span class="st">&quot;student_t(4, 0, 0.1)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;b&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;ndt&quot;</span>),</a>
+<a class="sourceLine" id="cb32-20" title="20">  <span class="kw">set_prior</span>(<span class="st">&quot;student_t(4, 0, 0.5)&quot;</span>, <span class="dt">class =</span> <span class="st">&quot;b&quot;</span>, <span class="dt">dpar =</span> <span class="st">&quot;w&quot;</span>)</a>
+<a class="sourceLine" id="cb32-21" title="21">)</a>
+<a class="sourceLine" id="cb32-22" title="22"></a>
+<a class="sourceLine" id="cb32-23" title="23">tmp_dat &lt;-<span class="st"> </span><span class="kw">make_standata</span>(formula,</a>
+<a class="sourceLine" id="cb32-24" title="24">                         <span class="dt">family =</span> ddm,</a>
+<a class="sourceLine" id="cb32-25" title="25">                         <span class="dt">data =</span> speed_acc,</a>
+<a class="sourceLine" id="cb32-26" title="26">                         <span class="dt">prior =</span> priors)</a>
+<a class="sourceLine" id="cb32-27" title="27"></a>
+<a class="sourceLine" id="cb32-28" title="28">init_fun &lt;-<span class="st"> </span><span class="cf">function</span>() {</a>
+<a class="sourceLine" id="cb32-29" title="29">  <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb32-30" title="30">    <span class="dt">b =</span> <span class="kw">rnorm</span>(tmp_dat<span class="op">$</span>K, <span class="dv">0</span>, <span class="fl">0.25</span>),</a>
+<a class="sourceLine" id="cb32-31" title="31">    <span class="dt">b_a =</span> <span class="kw">c</span>(<span class="kw">rnorm</span>(<span class="dv">1</span>, <span class="kw">log</span>(<span class="dv">1</span>), <span class="fl">0.1</span>), <span class="kw">rnorm</span>(tmp_dat<span class="op">$</span>K_a<span class="dv">-1</span>, <span class="dv">0</span>, <span class="fl">0.1</span>)),</a>
+<a class="sourceLine" id="cb32-32" title="32">    <span class="dt">b_ndt =</span> <span class="kw">c</span>(<span class="kw">runif</span>(<span class="dv">1</span>, <span class="kw">log</span>(<span class="fl">0.1</span>), <span class="kw">log</span>(<span class="fl">0.2</span>)), <span class="kw">rnorm</span>(tmp_dat<span class="op">$</span>K_ndt<span class="dv">-1</span>, <span class="dv">0</span>, <span class="fl">0.01</span>)),</a>
+<a class="sourceLine" id="cb32-33" title="33">    <span class="dt">b_w =</span> <span class="kw">c</span>(<span class="kw">runif</span>(<span class="dv">1</span>, <span class="kw">logit_scaled</span>(<span class="fl">0.4</span>), <span class="kw">logit_scaled</span>(<span class="fl">0.6</span>)), <span class="kw">rnorm</span>(tmp_dat<span class="op">$</span>K_w<span class="dv">-1</span>, <span class="dv">0</span>, <span class="fl">0.01</span>)),</a>
+<a class="sourceLine" id="cb32-34" title="34">    <span class="dt">Intercept_sv =</span> <span class="kw">rnorm</span>(<span class="dv">1</span>, <span class="kw">log</span>(<span class="fl">0.1</span>), <span class="fl">0.01</span>)</a>
+<a class="sourceLine" id="cb32-35" title="35">  )</a>
+<a class="sourceLine" id="cb32-36" title="36">}</a></code></pre></div>
+<p>Now we run the sampling.</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb33-1" title="1">fit_rwdata_5par &lt;-<span class="st"> </span><span class="kw">brm</span>(formula,</a>
+<a class="sourceLine" id="cb33-2" title="2">                       <span class="dt">family =</span> ddm,</a>
+<a class="sourceLine" id="cb33-3" title="3">                       <span class="dt">prior =</span> priors,</a>
+<a class="sourceLine" id="cb33-4" title="4">                       <span class="dt">stanvars =</span> stanvars_rw,</a>
+<a class="sourceLine" id="cb33-5" title="5">                       <span class="dt">data =</span> speed_acc,</a>
+<a class="sourceLine" id="cb33-6" title="6">                       <span class="dt">chains =</span> <span class="dv">4</span>,</a>
+<a class="sourceLine" id="cb33-7" title="7">                       <span class="dt">iter =</span> <span class="dv">1000</span>,</a>
+<a class="sourceLine" id="cb33-8" title="8">                       <span class="dt">warmup =</span> <span class="dv">500</span>,</a>
+<a class="sourceLine" id="cb33-9" title="9">                       <span class="dt">thin =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb33-10" title="10">                       <span class="dt">cores =</span> <span class="dv">4</span>,</a>
+<a class="sourceLine" id="cb33-11" title="11">                       <span class="dt">control =</span> <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb33-12" title="12">                         <span class="dt">max_treedepth =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb33-13" title="13">                         <span class="dt">adapt_delta =</span> <span class="fl">0.8</span></a>
+<a class="sourceLine" id="cb33-14" title="14">                       )</a>
+<a class="sourceLine" id="cb33-15" title="15">)</a></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb34-1" title="1"><span class="kw">saveRDS</span>(fit_rwdata_5par,</a>
+<a class="sourceLine" id="cb34-2" title="2">        <span class="dt">file =</span> <span class="kw">file.path</span>(<span class="kw">getwd</span>(),<span class="st">&quot;fits&quot;</span>, <span class="st">&quot;fit_rwdata_5par.RDS&quot;</span>))</a></code></pre></div>
 </div>
-<div id="realworld-post" class="section level2">
+<div id="rewrld-post" class="section level2">
 <h2>Posterior Predictive Checks</h2>
-<p>Some text.</p>
+<p>LOO</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb35-1" title="1"><span class="kw">loo</span>(fit_rwdata_5par)</a></code></pre></div>
+<p>Posterior predictive check</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb36-1" title="1"><span class="kw">pp_check</span>(fit_rwdata_5par)</a></code></pre></div>
 </div>
 </div>
 </div>
 <div id="section" class="section level1 unlisted unnumbered">
-<h1 class="unlisted unnumbered"></h1>
+<h1></h1>
 <div id="r-session-info" class="section level4 unlisted unnumbered">
-<h4 class="unlisted unnumbered">R Session Info</h4>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div>
+<h4>R Session Info</h4>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb37-1" title="1"><span class="kw">sessionInfo</span>()</a></code></pre></div>
 </div>
 </div>
-<div id="references" class="section level1">
+<div id="references" class="section level1 unnumbered">
 <h1>References</h1>
+<div id="refs" class="references">
+<div id="ref-blurton2012fast">
+<p>Blurton, Steven P, Miriam Kesselmeier, and Matthias Gondan. 2012. “Fast and Accurate Calculations for Cumulative First-Passage Time Distributions in Wiener Diffusion Models.” <em>Journal of Mathematical Psychology</em> 56 (6): 470–75.</p>
+</div>
+<div id="ref-brms2">
+<p>Bürkner, Paul-Christian. 2017. “Advanced Bayesian Multilevel Modeling with the R Package Brms.” <em>arXiv Preprint arXiv:1705.11123</em>.</p>
+</div>
+<div id="ref-brms1">
+<p>Bürkner, PC. 2017. “Bayesian Regression Models Using Stan.” <em>R Package Version</em> 1 (0).</p>
+</div>
+<div id="ref-feller1968introduction">
+<p>Feller, William. 1968. <em>An Introduction to Probability Theory and Its Applications: Volume I</em>. Vol. 1. John Wiley &amp; Sons.</p>
+</div>
+<div id="ref-forstmann2016sequential">
+<p>Forstmann, B.U., R. Ratcliff, and E.-J. Wagenmakers. 2016. “Sequential Sampling Models in Cognitive Neuroscience: Advantages, Applications, and Extensions.” <em>Annual Review of Psychology</em> 67 (1): 641–66. <a href="https://doi.org/10.1146/annurev-psych-122414-033645">https://doi.org/10.1146/annurev-psych-122414-033645</a>.</p>
+</div>
+<div id="ref-foster2021approximation">
+<p>Foster, Kendal, and Henrik Singmann. 2021. “Another Approximation of the First-Passage Time Densities for the Ratcliff Diffusion Decision Model.” <a href="http://arxiv.org/abs/2104.01902">http://arxiv.org/abs/2104.01902</a>.</p>
+</div>
+<div id="ref-gondan2014even">
+<p>Gondan, Matthias, Steven P Blurton, and Miriam Kesselmeier. 2014. “Even Faster and Even More Accurate First-Passage Time Densities and Distributions for the Wiener Diffusion Model.” <em>Journal of Mathematical Psychology</em> 60: 20–22.</p>
+</div>
+<div id="ref-navarro2009fast">
+<p>Navarro, Daniel J, and Ian G Fuss. 2009. “Fast and Accurate Calculations for First-Passage Times in Wiener Diffusion Models.” <em>Journal of Mathematical Psychology</em> 53 (4): 222–30.</p>
+</div>
+<div id="ref-ratcliff2008diffusion">
+<p>Ratcliff, R., and G. McKoon. 2008. “The Diffusion Decision Model: Theory and Data for Two-Choice Decision Tasks.” <em>Neural Computation</em> 20 (4): 873–922. <a href="https://doi.org/10.1162/neco.2008.12-06-420">https://doi.org/10.1162/neco.2008.12-06-420</a>.</p>
+</div>
+<div id="ref-ratcliff1978theory">
+<p>Ratcliff, Roger. 1978. “A Theory of Memory Retrieval.” <em>Psychological Review</em> 85 (2): 59.</p>
+</div>
+<div id="ref-rtdists">
+<p>Singmann, Henrik, Scott Brown, Matthew Gretton, and Andrew Heathcote. 2020. <em>Rtdists: Response Time Distributions</em>. <a href="https://CRAN.R-project.org/package=rtdists">https://CRAN.R-project.org/package=rtdists</a>.</p>
+</div>
+<div id="ref-rstan">
+<p>Stan Development Team. 2020. “RStan: The R Interface to Stan.” <a href="http://mc-stan.org/">http://mc-stan.org/</a>.</p>
+</div>
+<div id="ref-voss2008fast">
+<p>Voss, Andreas, and Jochen Voss. 2008. “A Fast Numerical Algorithm for the Estimation of Diffusion Model Parameters.” <em>Journal of Mathematical Psychology</em> 52 (1): 1–9.</p>
+</div>
+</div>
 </div>
 
 
