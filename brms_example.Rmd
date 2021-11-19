@@ -1005,6 +1005,7 @@ Now we run the sampling.
 fit_rwdata_5par <- brm(formula,
                        family = ddm,
                        prior = priors,
+		       inits = init_fun,
                        stanvars = stanvars_rw,
                        data = speed_acc,
                        chains = 4,
